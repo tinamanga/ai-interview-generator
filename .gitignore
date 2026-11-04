@@ -1,0 +1,28 @@
+cat > .gitignore <<'EOF'
+# Secrets and environment configuration
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+.next/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor and operating system files
+.DS_Store
+.vscode/
+.idea/
+
+# Generated files
+backend/src/generated/
+EOF
