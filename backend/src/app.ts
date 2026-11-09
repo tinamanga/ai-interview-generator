@@ -30,7 +30,6 @@ export async function buildApp() {
   // Only allow our configured frontend to access the API.
   await app.register(cors, {
     origin: env.FRONTEND_URL,
-    credentials: true
   });
 
   // Provides a global baseline against excessive requests.

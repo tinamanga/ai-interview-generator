@@ -254,24 +254,13 @@ Return exactly ${input.questionCount} distinct questions.
 
       const diagnostic = error as {
         name?: string;
-        message?: string;
         code?: string;
       };
-
-      let safeMessage = diagnostic?.message ?? "Unknown error";
-
-      if (env.GEMINI_API_KEY) {
-        safeMessage = safeMessage.replace(
-          env.GEMINI_API_KEY,
-          "[REDACTED]"
-        );
-      }
 
       console.error("[Gemini diagnostic]", {
         name: diagnostic?.name,
         status,
         code: diagnostic?.code,
-        message: safeMessage.slice(0, 500),
         attempt
       });
 
