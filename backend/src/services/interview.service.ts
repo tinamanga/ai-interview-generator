@@ -163,7 +163,7 @@ const delay = (ms: number) =>
 export async function generateInterviewQuestions(
   input: GenerateInterviewQuestionsInput
 ): Promise<GenerateInterviewQuestionsResult> {
-  const model = env.GEMINI_MODEL || "gemini-3.8-flash";
+  const model = env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
   let client;
 
