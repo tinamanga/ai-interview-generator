@@ -1,3 +1,4 @@
+
 import { env } from "../config/env.js";
 import { getGeminiClient } from "../integrations/gemini/gemini.client.js";
 import {
@@ -6,7 +7,6 @@ import {
 } from "../integrations/gemini/gemini.schema.js";
 import { GeminiIntegrationError } from "../integrations/gemini/gemini.errors.js";
 
-// These values match the enums in our Prisma database schema.
 export type GenerateInterviewQuestionsInput = {
   jobTitle: string;
   jobDescription: string;
@@ -15,8 +15,6 @@ export type GenerateInterviewQuestionsInput = {
   questionCount: number;
 };
 
-// The service returns both the questions and provider usage metadata.
-// The caller can decide how and when to persist these values.
 export type GenerateInterviewQuestionsResult = {
   questions: {
     question: string;
@@ -34,8 +32,37 @@ export type GenerateInterviewQuestionsResult = {
   providerRequestId: string | null;
 };
 
-// Convert provider failures into stable internal error codes.
-// Never include the original provider error in the message returned to clients.
+// Extract the HTTP status from the SDK error.
+// Some SDK errors include the status inside a JSON error message.
+function getProviderStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") {
+    return undefined;
+  }
+
+  const candidate = error as {
+    status?: number;
+    statusCode?: number;
+    message?: string;
+  };
+
+  const directStatus = candidate.status ?? candidate.statusCode;
+
+  if (directStatus !== undefined) {
+    return directStatus;
+  }
+
+  if (candidate.message) {
+    try {
+      const parsed = JSON.parse(candidate.message);
+      return parsed?.error?.code;
+    } catch {
+      return undefined;
+    }
+  }
+
+  return undefined;
+}
+
 function classifyGeminiError(error: unknown): GeminiIntegrationError {
   if (error instanceof GeminiIntegrationError) {
     return error;
@@ -44,19 +71,18 @@ function classifyGeminiError(error: unknown): GeminiIntegrationError {
   const candidate = error as {
     name?: string;
     message?: string;
-    status?: number;
-    statusCode?: number;
-    code?: string;
   };
 
-  const status = candidate?.status ?? candidate?.statusCode;
-  const errorMessage = candidate?.message?.toLowerCase() ?? "";
-  const errorName = candidate?.name?.toLowerCase() ?? "";
+  const status = getProviderStatus(error);
+  const message = candidate?.message?.toLowerCase() ?? "";
+  const name = candidate?.name?.toLowerCase() ?? "";
 
   if (
-    errorName.includes("timeout") ||
-    errorMessage.includes("timeout") ||
-    errorMessage.includes("timed out")
+    name.includes("timeout") ||
+    message.includes("timeout") ||
+    message.includes("timed out") ||
+    message.includes("deadline_exceeded") ||
+    status === 504
   ) {
     return new GeminiIntegrationError(
       "GEMINI_TIMEOUT",
@@ -78,7 +104,18 @@ function classifyGeminiError(error: unknown): GeminiIntegrationError {
     );
   }
 
-  if (status === 503 || status === 502 || status === 500) {
+  if (status === 404) {
+    return new GeminiIntegrationError(
+      "GEMINI_MODEL_NOT_FOUND",
+      "The configured AI model could not be found or is unavailable."
+    );
+  }
+
+  if (
+    status === 500 ||
+    status === 502 ||
+    status === 503
+  ) {
     return new GeminiIntegrationError(
       "GEMINI_UNAVAILABLE",
       "The AI provider is temporarily unavailable."
@@ -91,11 +128,42 @@ function classifyGeminiError(error: unknown): GeminiIntegrationError {
   );
 }
 
+// Only retry temporary provider failures.
+// Always retry using the same configured model.
+function isTransientError(error: unknown): boolean {
+  const status = getProviderStatus(error);
+
+  const candidate = error as {
+    name?: string;
+    message?: string;
+    code?: string;
+  };
+
+  const message = candidate?.message?.toLowerCase() ?? "";
+  const name = candidate?.name?.toLowerCase() ?? "";
+  const code = candidate?.code?.toLowerCase() ?? "";
+
+  return (
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    name.includes("timeout") ||
+    message.includes("timed out") ||
+    message.includes("deadline_exceeded") ||
+    code.includes("econnreset") ||
+    code.includes("etimedout") ||
+    code.includes("econnrefused")
+  );
+}
+
+const delay = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function generateInterviewQuestions(
   input: GenerateInterviewQuestionsInput
 ): Promise<GenerateInterviewQuestionsResult> {
-  // Use a configurable model, with a sensible development default.
-  const model = env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = env.GEMINI_MODEL || "gemini-3.8-flash";
 
   let client;
 
@@ -108,8 +176,6 @@ export async function generateInterviewQuestions(
     );
   }
 
-  // System instructions establish the role and expected behaviour.
-  // Job description content is untrusted input, not an instruction source.
   const systemInstruction = `
 You are an experienced technical recruitment and interview-design assistant.
 
@@ -129,7 +195,6 @@ Rules:
 8. Return only the structured JSON requested.
 `;
 
-  // Delimit job information so it is clearly separated from instructions.
   const prompt = `
 Generate exactly ${input.questionCount} interview questions.
 
@@ -159,83 +224,130 @@ INTERVIEW TYPE GUIDANCE:
 Return exactly ${input.questionCount} distinct questions.
 `;
 
+  const maxAttempts = 2;
+  const baseDelayMs = 2000;
   const startedAt = Date.now();
 
-  try {
-    const response = await client.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        responseJsonSchema: geminiJsonSchema,
-        temperature: 0.4,
-        maxOutputTokens: 6000
-      }
-    });
+  let response;
 
-    const latencyMs = Date.now() - startedAt;
-
-    // A missing response is not a valid successful generation.
-    if (!response.text) {
-      throw new GeminiIntegrationError(
-        "GEMINI_INVALID_RESPONSE",
-        "The AI provider returned an empty response."
-      );
-    }
-
-    // Parse the JSON returned by Gemini.
-    let parsedResponse: unknown;
-
+  // Retry temporary failures without changing the model.
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      parsedResponse = JSON.parse(response.text);
-    } catch {
-      throw new GeminiIntegrationError(
-        "GEMINI_INVALID_RESPONSE",
-        "The AI provider returned an invalid JSON response."
+      response = await client.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          responseJsonSchema: geminiJsonSchema,
+          maxOutputTokens: 6000
+        }
+      });
+
+      break;
+    } catch (error) {
+      if (error instanceof GeminiIntegrationError) {
+        throw error;
+      }
+
+      const status = getProviderStatus(error);
+
+      const diagnostic = error as {
+        name?: string;
+        message?: string;
+        code?: string;
+      };
+
+      let safeMessage = diagnostic?.message ?? "Unknown error";
+
+      if (env.GEMINI_API_KEY) {
+        safeMessage = safeMessage.replace(
+          env.GEMINI_API_KEY,
+          "[REDACTED]"
+        );
+      }
+
+      console.error("[Gemini diagnostic]", {
+        name: diagnostic?.name,
+        status,
+        code: diagnostic?.code,
+        message: safeMessage.slice(0, 500),
+        attempt
+      });
+
+      // Do not retry invalid models, authentication failures or rate limits.
+      if (
+        !isTransientError(error) ||
+        attempt === maxAttempts
+      ) {
+        throw classifyGeminiError(error);
+      }
+
+      const backoffMs = baseDelayMs * Math.pow(2, attempt - 1);
+
+      console.warn(
+        `[Gemini service] Temporary provider failure. ` +
+        `Retrying the same model (${model}) in ${backoffMs}ms.`
       );
+
+      await delay(backoffMs);
     }
-
-    // Independently validate the generated content with Zod.
-    const validatedResponse = geminiResponseSchema.safeParse(parsedResponse);
-
-    if (!validatedResponse.success) {
-      throw new GeminiIntegrationError(
-        "GEMINI_INVALID_RESPONSE",
-        "The AI provider returned data that did not match the expected format."
-      );
-    }
-
-    // The model must return exactly the number of questions requested.
-    if (validatedResponse.data.questions.length !== input.questionCount) {
-      throw new GeminiIntegrationError(
-        "GEMINI_INVALID_RESPONSE",
-        "The AI provider did not return the requested number of questions."
-      );
-    }
-
-    const usageMetadata = response.usageMetadata;
-
-    return {
-      questions: validatedResponse.data.questions,
-
-      // Token metadata can be absent, so preserve unknown values as null.
-      usage: {
-        inputTokens: usageMetadata?.promptTokenCount ?? null,
-        outputTokens: usageMetadata?.candidatesTokenCount ?? null,
-        totalTokens: usageMetadata?.totalTokenCount ?? null
-      },
-
-      model,
-      latencyMs,
-      providerRequestId: response.responseId ?? null
-    };
-  } catch (error) {
-    // Preserve our own safe errors instead of reclassifying them.
-    if (error instanceof GeminiIntegrationError) {
-      throw error;
-    }
-
-    throw classifyGeminiError(error);
   }
+
+  if (!response) {
+    throw new GeminiIntegrationError(
+      "GEMINI_UNAVAILABLE",
+      "The AI provider did not return a response."
+    );
+  }
+
+  const latencyMs = Date.now() - startedAt;
+
+  if (!response.text) {
+    throw new GeminiIntegrationError(
+      "GEMINI_INVALID_RESPONSE",
+      "The AI provider returned an empty response."
+    );
+  }
+
+  let parsedResponse: unknown;
+
+  try {
+    parsedResponse = JSON.parse(response.text);
+  } catch {
+    throw new GeminiIntegrationError(
+      "GEMINI_INVALID_RESPONSE",
+      "The AI provider returned an invalid JSON response."
+    );
+  }
+
+  const validatedResponse = geminiResponseSchema.safeParse(parsedResponse);
+
+  if (!validatedResponse.success) {
+    throw new GeminiIntegrationError(
+      "GEMINI_INVALID_RESPONSE",
+      "The AI provider returned data that did not match the expected format."
+    );
+  }
+
+  if (validatedResponse.data.questions.length !== input.questionCount) {
+    throw new GeminiIntegrationError(
+      "GEMINI_INVALID_RESPONSE",
+      "The AI provider did not return the requested number of questions."
+    );
+  }
+
+  const usageMetadata = response.usageMetadata;
+
+  return {
+    questions: validatedResponse.data.questions,
+    usage: {
+      inputTokens: usageMetadata?.promptTokenCount ?? null,
+      outputTokens: usageMetadata?.candidatesTokenCount ?? null,
+      totalTokens: usageMetadata?.totalTokenCount ?? null
+    },
+    model,
+    latencyMs,
+    providerRequestId: response.responseId ?? null
+  };
 }

@@ -14,7 +14,7 @@ export function getGeminiClient(): GoogleGenAI {
 
       // Prevent requests from waiting indefinitely.
       httpOptions: {
-        timeout: 30_000
+        timeout: 20_000
       }
     });
   }

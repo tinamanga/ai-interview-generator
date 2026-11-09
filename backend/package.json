@@ -10,7 +10,8 @@
     "start": "node dist/server.js",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "test:gemini": "RUN_GEMINI_INTEGRATION=true vitest run tests/gemini.integration.test.ts"
   },
   "keywords": [],
   "author": "",
