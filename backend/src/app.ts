@@ -6,6 +6,7 @@ import rateLimit from "@fastify/rate-limit";
 
 import { env } from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
+import interviewRoutes from "./routes/interview.routes.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -33,14 +34,17 @@ export async function buildApp() {
   });
 
   // Provides a global baseline against excessive requests.
-  // Generation endpoints will receive stricter limits later.
   await app.register(rateLimit, {
     max: 100,
     timeWindow: "1 minute"
   });
 
-  // Keep API endpoints versioned to support future API changes.
+  // Register versioned API routes.
   await app.register(healthRoutes, {
+    prefix: "/api/v1"
+  });
+
+  await app.register(interviewRoutes, {
     prefix: "/api/v1"
   });
 
