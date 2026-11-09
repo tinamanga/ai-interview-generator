@@ -1,4 +1,4 @@
-# 🤖 AI Interview Questions Generator
+#  AI Interview Questions Generator
 
 An AI-powered full-stack application that generates tailored technical and behavioral interview questions based on job descriptions, roles and candidate experience levels.
 
@@ -16,7 +16,7 @@ An AI-powered full-stack application that generates tailored technical and behav
 
 ---
 
-## 📌 Overview
+##  Overview
 
 AI Interview Questions Generator is a full-stack application designed to simplify interview preparation by using Google's Gemini AI to generate relevant interview questions from job information.
 
@@ -24,7 +24,7 @@ Users can provide a job title, job description, experience level and interview t
 
 The project focuses on secure API development, AI integration, structured data validation, database persistence and frontend/backend communication.
 
-## ✨ Features
+##  Features
 
 - AI-powered interview question generation.
 - Job title and job description inputs.
@@ -42,13 +42,13 @@ The project focuses on secure API development, AI integration, structured data v
 - Responsive frontend interface.
 - Loading, validation and error states.
 
-## 🖥️ Application Preview
+##  Application Preview
 
 The application provides an interface for submitting job information and reviewing AI-generated interview questions.
 
 > Screenshots can be added here as the application evolves.
 
-## 🛠️ Technology Stack
+##  Technology Stack
 
 | Layer | Technology |
 |---|---|
@@ -67,7 +67,7 @@ The application provides an interface for submitting job information and reviewi
 | Testing | Vitest |
 | Code quality | ESLint |
 
-## 🏗️ System Architecture
+##  System Architecture
 
 The application follows a client-server architecture with a modular backend.
 
@@ -114,7 +114,7 @@ The application follows a client-server architecture with a modular backend.
 8. The generation, questions and usage records are persisted in PostgreSQL.
 9. The frontend displays the generated questions and associated metadata.
 
-## 📁 Project Structure
+##  Project Structure
 
 ```text
 ai-interview-generator/
@@ -138,7 +138,7 @@ ai-interview-generator/
 └── .gitignore
 ```
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -210,7 +210,7 @@ The backend exposes versioned REST API endpoints.
 
 For detailed API request formats, response examples and error handling, see the [Backend Documentation](backend/README.md).
 
-## 🔐 Security
+##  Security
 
 Security is an important part of this project.
 
@@ -229,7 +229,7 @@ Implemented security foundations include:
 
 Production deployment will require additional environment-specific hardening and monitoring.
 
-## 🧪 Testing and Quality
+##  Testing and Quality
 
 The project uses automated testing and build verification.
 
@@ -258,7 +258,7 @@ npm run test:gemini
 
 The Gemini integration test requires a valid API key and internet connectivity.
 
-## 📚 Documentation
+##  Documentation
 
 Detailed documentation is maintained separately for each application layer.
 
@@ -267,7 +267,7 @@ Detailed documentation is maintained separately for each application layer.
 | [Backend README](backend/README.md) | Backend architecture, setup, database, API, Gemini integration, security and tests |
 | [Frontend README](frontend/README.md) | Frontend setup, structure, environment variables and backend integration |
 
-## 🗺️ Development Roadmap
+##  Development Roadmap
 
 - [x] Backend project initialization.
 - [x] PostgreSQL database and Prisma integration.
@@ -286,7 +286,7 @@ Detailed documentation is maintained separately for each application layer.
 - [ ] Production deployment.
 - [ ] Additional production security hardening.
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions, suggestions and improvements are welcome.
 
@@ -296,7 +296,7 @@ Contributions, suggestions and improvements are welcome.
 4. Run relevant tests and builds.
 5. Submit a pull request.
 
-## 👩‍💻 Author
+##  Author
 
 **Christina Manga**
 
