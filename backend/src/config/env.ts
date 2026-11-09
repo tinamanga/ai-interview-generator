@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 import { z } from "zod";
 
@@ -13,20 +12,22 @@ const envSchema = z
 
     PORT: z.coerce.number().int().min(1).max(65535).default(5000),
 
+    // Pooled connection used by the running application.
     DATABASE_URL: z.string().trim().min(1),
+
+    // Direct connection used by Prisma migrations.
+    DIRECT_URL: z.string().trim().min(1),
 
     FRONTEND_URL: z
       .string()
       .url()
       .default("http://localhost:3000"),
 
-    // These can be optional during local development and testing.
     GEMINI_API_KEY: z.string().trim().min(1).optional(),
 
     GEMINI_MODEL: z.string().trim().min(1).optional()
   })
   .superRefine((configuration, context) => {
-    // Production must have all external service configuration ready.
     if (configuration.NODE_ENV === "production") {
       if (!configuration.GEMINI_API_KEY) {
         context.addIssue({
@@ -44,7 +45,6 @@ const envSchema = z
         });
       }
 
-      // Production frontend communication must use HTTPS.
       if (!configuration.FRONTEND_URL.startsWith("https://")) {
         context.addIssue({
           code: "custom",

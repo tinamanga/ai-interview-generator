@@ -1,4 +1,4 @@
-cat > .gitignore <<'EOF'
+
 # Secrets and environment configuration
 .env
 .env.*
@@ -25,4 +25,3 @@ npm-debug.log*
 
 # Generated files
 backend/src/generated/
-EOF
