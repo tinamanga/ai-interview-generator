@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -37,44 +36,84 @@ enum QuestionDifficulty {
   HARD
 }
 
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  passwordHash String   @db.VarChar(255)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  // A user can own multiple interview generations and sessions.
+  generations Generation[]
+  sessions    RefreshSession[]
+
+  @@index([createdAt])
+  @@map("users")
+}
+
+model RefreshSession {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  tokenHash     String    @unique @db.VarChar(255)
+  tokenFamilyId String    @db.Uuid
+  expiresAt     DateTime  @db.Timestamptz(3)
+  revokedAt     DateTime? @db.Timestamptz(3)
+  lastUsedAt    DateTime? @db.Timestamptz(3)
+  userAgent     String?   @db.VarChar(500)
+  ipAddress     String?   @db.VarChar(45)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenFamilyId])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
+}
+
 model Generation {
-  id               String           @id @default(uuid()) @db.Uuid
-  jobTitle         String           @db.VarChar(150)
-  jobDescription   String           @db.Text
-  experienceLevel  ExperienceLevel
-  interviewType    InterviewType
-  questionCount    Int
-  provider         String           @default("gemini") @db.VarChar(50)
-  model            String           @db.VarChar(100)
-  promptVersion    String           @default("v1") @db.VarChar(20)
-  status           GenerationStatus @default(PENDING)
-  errorCode        String?          @db.VarChar(100)
-  createdAt        DateTime         @default(now()) @db.Timestamptz(3)
-  completedAt      DateTime?        @db.Timestamptz(3)
+  id              String           @id @default(uuid()) @db.Uuid
+  userId          String?          @db.Uuid
+  jobTitle        String           @db.VarChar(150)
+  jobDescription  String           @db.Text
+  experienceLevel ExperienceLevel
+  interviewType   InterviewType
+  questionCount   Int
+  provider        String           @default("gemini") @db.VarChar(50)
+  model           String           @db.VarChar(100)
+  promptVersion   String           @default("v1") @db.VarChar(20)
+  status          GenerationStatus @default(PENDING)
+  errorCode       String?          @db.VarChar(100)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  completedAt     DateTime?        @db.Timestamptz(3)
+
+  // Existing generations can remain unowned during the migration.
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   // One generation can produce multiple interview questions.
-  questions        GeneratedQuestion[]
+  questions GeneratedQuestion[]
 
   // Each generation can have at most one usage record.
-  usage            UsageRecord?
+  usage UsageRecord?
 
+  @@index([userId, createdAt])
   @@index([createdAt])
   @@index([status])
   @@map("generations")
 }
 
 model GeneratedQuestion {
-  id                  String             @id @default(uuid()) @db.Uuid
-  generationId        String             @db.Uuid
-  position            Int
-  question            String             @db.Text
-  category            String             @db.VarChar(100)
-  difficulty          QuestionDifficulty
-  evaluationCriteria  String             @db.Text
-  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  id                 String             @id @default(uuid()) @db.Uuid
+  generationId       String             @db.Uuid
+  position           Int
+  question           String             @db.Text
+  category           String             @db.VarChar(100)
+  difficulty         QuestionDifficulty
+  evaluationCriteria String             @db.Text
+  createdAt          DateTime           @default(now()) @db.Timestamptz(3)
 
   // Deleting a generation also deletes its associated questions.
-  generation          Generation         @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  generation Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
 
   // A generation cannot have two questions at the same position.
   @@unique([generationId, position])
@@ -83,17 +122,17 @@ model GeneratedQuestion {
 }
 
 model UsageRecord {
-  id                String      @id @default(uuid()) @db.Uuid
-  generationId      String      @unique @db.Uuid
+  id                String   @id @default(uuid()) @db.Uuid
+  generationId      String   @unique @db.Uuid
   inputTokens       Int?
   outputTokens      Int?
   totalTokens       Int?
   latencyMs         Int
-  providerRequestId String?     @db.VarChar(255)
-  createdAt         DateTime    @default(now()) @db.Timestamptz(3)
+  providerRequestId String?  @db.VarChar(255)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
 
   // Each usage record belongs to exactly one generation.
-  generation        Generation  @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  generation Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@map("usage_records")
