@@ -4,6 +4,15 @@ InterviewIQ is an AI-powered interview preparation application that generates ta
 
 Users can specify the candidate's experience level, interview type, and desired number of questions. The application uses Google's Gemini API to generate structured questions, including difficulty levels, categories, and evaluation criteria.
 
+## Project Documentation
+
+Explore the documentation for each part of the application:
+
+| Documentation | Description |
+|---|---|
+| [Frontend Documentation](frontend/README.md) | Frontend setup, technologies, routes, authentication, and development commands. |
+| [Backend Documentation](backend/README.md) | Backend setup, API endpoints, database, authentication, and development commands. |
+
 ## Features
 
 - Public landing page explaining the application.
@@ -65,7 +74,14 @@ The frontend communicates with the backend through the versioned `/api/v1` API.
 
 The backend handles validation, AI provider communication, authentication, persistence, and error handling. The Gemini API key remains on the backend.
 
-## Repository Structure
+## Repository Structure## Project Documentation
+
+Explore the documentation for each part of the application:
+
+| Documentation | Description |
+|---|---|
+| [Frontend Documentation](frontend/README.md) | Frontend setup, technologies, routes, authentication, and development commands. |
+| [Backend Documentation](backend/README.md) | Backend setup, API endpoints, database, authentication, and development commands. |
 
 ```text
 ai-interview-generator/
@@ -386,6 +402,7 @@ Production refresh cookies require HTTPS and use `SameSite=None; Secure`. Ensure
 3. Run the relevant tests and quality checks.
 4. Review your changes before committing.
 5. Use clear, descriptive commit messages.
+
 
 ## License
 

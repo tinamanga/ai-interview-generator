@@ -17,7 +17,7 @@ import {
 
 export default function Home() {
   const router = useRouter();
-  const { status } = useAuth();
+  const { status, user, logout } = useAuth();
 
   // Redirect visitors who do not have an authenticated session.
   useEffect(() => {
@@ -37,12 +37,24 @@ export default function Home() {
 
   // API and results state
   const [loading, setLoading] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [generation, setGeneration] =
     useState<InterviewGeneration | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [validationErrors, setValidationErrors] = useState<
     Array<{ field: string; message: string }>
   >([]);
+
+  // Sign out and return to the login page.
+  async function handleLogout() {
+    setLoggingOut(true);
+
+    // The auth provider clears local authentication even if the
+    // backend logout request fails.
+    await logout().catch(() => undefined);
+
+    router.replace("/login");
+  }
 
   // Submit the form to the Fastify backend.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -112,12 +124,17 @@ export default function Home() {
 
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-slate-500 sm:inline">
-              AI-powered interview preparation
+              {user?.email}
             </span>
 
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-sm font-semibold text-indigo-700">
-              CM
-            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loggingOut ? "Signing out..." : "Logout"}
+            </button>
           </div>
         </div>
       </header>
