@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getDifficultyBadgeClass } from "@/lib/difficulty";
+import type { QuestionDifficulty } from "@/lib/interview-api";
 
 const features = [
   {
@@ -45,7 +47,12 @@ const steps = [
   },
 ];
 
-const sampleQuestions = [
+const sampleQuestions: {
+  category: string;
+  difficulty: QuestionDifficulty;
+  question: string;
+  criteria: string;
+}[] = [
   {
     category: "Backend development",
     difficulty: "MEDIUM",
@@ -273,13 +280,7 @@ export default function Home() {
                           Question 0{index + 1}
                         </span>
                         <span
-                          className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${
-                            question.difficulty === "HARD"
-                              ? "bg-rose-50 text-rose-700"
-                              : question.difficulty === "MEDIUM"
-                                ? "bg-amber-50 text-amber-700"
-                                : "bg-emerald-50 text-emerald-700"
-                          }`}
+                          className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${getDifficultyBadgeClass(question.difficulty)}`}
                         >
                           {question.difficulty}
                         </span>

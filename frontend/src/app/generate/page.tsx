@@ -3,6 +3,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { getDifficultyBadgeClass } from "@/lib/difficulty";
 
 import {
   generateInterview,
@@ -367,7 +368,9 @@ export default function Home() {
                         Question {question.position}
                       </span>
 
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${getDifficultyBadgeClass(question.difficulty)}`}
+                      >
                         {question.difficulty}
                       </span>
                     </div>
