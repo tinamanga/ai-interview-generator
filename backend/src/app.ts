@@ -1,51 +1,54 @@
-
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import cookie from "@fastify/cookie";
+import jwt from "@fastify/jwt";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 
 import { env } from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
 import interviewRoutes from "./routes/interview.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 export async function buildApp() {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "development" ? "debug" : "info",
-
-      // Never include authentication credentials in logged headers.
       redact: [
         "req.headers.authorization",
         "req.headers.cookie"
       ]
     },
-
-    // Prevent excessively large incoming JSON requests.
     bodyLimit: 1024 * 1024
   });
 
-  // Adds security-related HTTP response headers.
   await app.register(helmet);
 
-  // Only allow our configured frontend to access the API.
-  await app.register(cors, {
-    origin: env.FRONTEND_URL,
+  // Cookie support is needed for secure, HttpOnly refresh-token cookies.
+  await app.register(cookie);
+
+  // Access tokens are short-lived to reduce the impact of token theft.
+  await app.register(jwt, {
+    secret: env.ACCESS_TOKEN_SECRET,
+    sign: {
+      expiresIn: "15m"
+    }
   });
 
-  // Provides a global baseline against excessive requests.
+  // Only the configured frontend origin may access the API with credentials.
+  await app.register(cors, {
+    origin: env.FRONTEND_URL,
+    credentials: true
+  });
+
   await app.register(rateLimit, {
     max: 100,
     timeWindow: "1 minute"
   });
 
-  // Register versioned API routes.
-  await app.register(healthRoutes, {
-    prefix: "/api/v1"
-  });
-
-  await app.register(interviewRoutes, {
-    prefix: "/api/v1"
-  });
+  await app.register(healthRoutes, { prefix: "/api/v1" });
+  await app.register(authRoutes, { prefix: "/api/v1" });
+  await app.register(interviewRoutes, { prefix: "/api/v1" });
 
   return app;
 }

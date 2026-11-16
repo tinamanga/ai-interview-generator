@@ -1,3 +1,4 @@
+
 import "dotenv/config";
 import { z } from "zod";
 
@@ -22,6 +23,12 @@ const envSchema = z
       .string()
       .url()
       .default("http://localhost:3000"),
+
+    // Private key used to sign short-lived access tokens.
+    // This must be configured separately in local and production environments.
+    ACCESS_TOKEN_SECRET: z
+      .string()
+      .min(32, "ACCESS_TOKEN_SECRET must contain at least 32 characters."),
 
     GEMINI_API_KEY: z.string().trim().min(1).optional(),
 
