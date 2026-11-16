@@ -170,7 +170,7 @@ export default function Home() {
             <p className="mt-7 max-w-xl text-base leading-8 text-slate-600 sm:text-lg">
               Stop guessing what interviewers might ask. InterviewIQ uses AI
               to generate tailored interview questions based on the job role,
-              job description, and experience level you're targeting.
+              job description, and experience level you&apos;re targeting.
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -509,8 +509,8 @@ export default function Home() {
           </h2>
 
           <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-indigo-100 sm:text-base">
-            Explore the tool, create your account when you're ready, and
-            generate interview questions tailored to the opportunity you're
+            Explore the tool, create your account when you&apos;re ready, and
+            generate interview questions tailored to the opportunity you&apos;re
             pursuing.
           </p>
 
