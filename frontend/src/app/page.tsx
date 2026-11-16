@@ -1,534 +1,565 @@
-
-"use client";
-
-import { useState, type FormEvent } from "react";
 import Link from "next/link";
 
-import {
-  generateInterview,
-  InterviewApiError,
-  type InterviewGeneration,
-  type ExperienceLevel,
-  type InterviewType,
-} from "@/lib/interview-api";
+const features = [
+  {
+    number: "01",
+    title: "Questions tailored to the role",
+    description:
+      "Generate questions using the actual job title and job description instead of relying on generic interview question lists.",
+    icon: "✦",
+  },
+  {
+    number: "02",
+    title: "Choose your interview level",
+    description:
+      "Prepare for junior, mid-level, or senior positions with questions suited to the experience required.",
+    icon: "◈",
+  },
+  {
+    number: "03",
+    title: "Understand what interviewers look for",
+    description:
+      "Each generated question includes evaluation criteria to help you understand what a strong answer should demonstrate.",
+    icon: "✓",
+  },
+];
+
+const steps = [
+  {
+    number: "01",
+    title: "Enter the job details",
+    description:
+      "Provide the job title and paste the job description so the AI understands the role.",
+  },
+  {
+    number: "02",
+    title: "Customize your interview",
+    description:
+      "Choose your experience level, interview type, and how many questions you want.",
+  },
+  {
+    number: "03",
+    title: "Generate and prepare",
+    description:
+      "Receive tailored interview questions organized by category and difficulty, with evaluation criteria.",
+  },
+];
+
+const sampleQuestions = [
+  {
+    category: "Backend development",
+    difficulty: "MEDIUM",
+    question:
+      "How would you design a REST API that supports authentication and role-based access control?",
+    criteria:
+      "API design, authentication, authorization, security, and maintainability.",
+  },
+  {
+    category: "Database management",
+    difficulty: "EASY",
+    question:
+      "What is the difference between a primary key and a foreign key in a relational database?",
+    criteria:
+      "Relational database concepts, data integrity, and practical understanding.",
+  },
+  {
+    category: "Problem solving",
+    difficulty: "HARD",
+    question:
+      "How would you investigate and resolve a performance issue in a production application?",
+    criteria:
+      "Systematic debugging, monitoring, root-cause analysis, and communication.",
+  },
+];
+
+function ArrowIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="none"
+      className="h-4 w-4"
+    >
+      <path
+        d="M4.167 10h11.666M10 4.167 15.833 10 10 15.833"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export default function Home() {
-  // Form state
-  const [jobTitle, setJobTitle] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
-  const [experienceLevel, setExperienceLevel] =
-    useState<ExperienceLevel>("JUNIOR");
-  const [interviewType, setInterviewType] =
-    useState<InterviewType>("TECHNICAL");
-  const [questionCount, setQuestionCount] = useState("5");
-
-  // API and results state
-  const [loading, setLoading] = useState(false);
-  const [generation, setGeneration] =
-    useState<InterviewGeneration | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [validationErrors, setValidationErrors] = useState<
-    Array<{ field: string; message: string }>
-  >([]);
-
-  // Submit the form to the Fastify backend.
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    setLoading(true);
-    setErrorMessage("");
-    setValidationErrors([]);
-    setGeneration(null);
-
-    try {
-      const result = await generateInterview({
-        jobTitle: jobTitle.trim(),
-        jobDescription: jobDescription.trim(),
-        experienceLevel,
-        interviewType,
-        questionCount: Number(questionCount),
-      });
-
-      setGeneration(result);
-    } catch (error) {
-      if (error instanceof InterviewApiError) {
-        setErrorMessage(error.message);
-        setValidationErrors(error.details ?? []);
-      } else {
-        // Keep internal server and network details out of the UI.
-        setErrorMessage(
-          "Unable to reach the server. Please check your connection and try again.",
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-[#f7f8fc] text-slate-900">
-      {/* Top navigation */}
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
+    <main className="min-h-screen overflow-hidden bg-white text-slate-900">
+      {/* Public navigation */}
+      <header className="relative z-10 border-b border-slate-100 bg-white">
+        <nav
+          aria-label="Main navigation"
+          className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10"
+        >
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-lg font-bold text-white">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-xl font-bold text-white shadow-sm shadow-indigo-200">
               Q
-            </div>
+            </span>
 
-            <span className="text-lg font-bold tracking-tight">
+            <span className="text-xl font-bold tracking-tight">
               Interview<span className="text-indigo-600">IQ</span>
             </span>
           </Link>
 
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-500 sm:inline">
-              AI-powered interview preparation
-            </span>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-sm font-semibold text-indigo-700">
-              CM
-            </div>
+          <div className="hidden items-center gap-8 md:flex">
+            <a
+              href="#how-it-works"
+              className="text-sm font-medium text-slate-600 transition hover:text-indigo-600"
+            >
+              How it works
+            </a>
+            <a
+              href="#features"
+              className="text-sm font-medium text-slate-600 transition hover:text-indigo-600"
+            >
+              Features
+            </a>
+            <a
+              href="#preview"
+              className="text-sm font-medium text-slate-600 transition hover:text-indigo-600"
+            >
+              Preview
+            </a>
           </div>
-        </div>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login?next=%2Fgenerate"
+              className="hidden rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:inline-flex"
+            >
+              Sign in
+            </Link>
+
+            <Link
+              href="/register?next=%2Fgenerate"
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200"
+            >
+              Get started
+              <ArrowIcon />
+            </Link>
+          </div>
+        </nav>
       </header>
 
-      <main className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
-        {/* Page introduction */}
-        <section className="mb-9">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">
-            <span className="h-2 w-2 rounded-full bg-indigo-500" />
-            INTERVIEW PREPARATION WORKSPACE
-          </div>
+      {/* Hero */}
+      <section className="relative isolate">
+        <div className="pointer-events-none absolute -right-48 -top-36 -z-10 h-[560px] w-[560px] rounded-full bg-indigo-50/80 blur-3xl" />
+        <div className="pointer-events-none absolute -left-48 top-40 -z-10 h-[400px] w-[400px] rounded-full bg-blue-50/70 blur-3xl" />
 
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-            Prepare for your next interview.
-          </h1>
-
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            Generate tailored interview questions based on a job description,
-            role, and experience level. Focus your preparation on what matters.
-          </p>
-        </section>
-
-        {/* Main workspace */}
-        <div className="grid gap-7 lg:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-          {/* Generation form */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <div className="mb-7">
-              <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-lg text-indigo-600">
-                ✦
-              </div>
-
-              <h2 className="text-xl font-bold text-slate-900">
-                Create an interview
-              </h2>
-
-              <p className="mt-1 text-sm leading-6 text-slate-500">
-                Provide the role details and customize your interview.
-              </p>
+        <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-20 sm:px-8 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:px-10 lg:py-28">
+          <div>
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-4 py-2 text-xs font-semibold tracking-wide text-indigo-700 shadow-sm">
+              <span className="h-2 w-2 rounded-full bg-indigo-500" />
+              AI-POWERED INTERVIEW PREPARATION
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Job title */}
-              <div>
-                <label
-                  htmlFor="jobTitle"
-                  className="mb-2 block text-sm font-semibold text-slate-700"
-                >
-                  Job title <span className="text-red-500">*</span>
-                </label>
+            <h1 className="max-w-2xl text-4xl leading-[1.13] font-bold tracking-tight text-slate-950 sm:text-5xl lg:text-[60px]">
+              Walk into your next interview{" "}
+              <span className="text-indigo-600">prepared.</span>
+            </h1>
 
-                <input
-                  id="jobTitle"
-                  name="jobTitle"
-                  type="text"
-                  required
-                  minLength={2}
-                  maxLength={150}
-                  value={jobTitle}
-                  onChange={(event) => setJobTitle(event.target.value)}
-                  placeholder="e.g. Junior Backend Developer"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
-                />
+            <p className="mt-7 max-w-xl text-base leading-8 text-slate-600 sm:text-lg">
+              Stop guessing what interviewers might ask. InterviewIQ uses AI
+              to generate tailored interview questions based on the job role,
+              job description, and experience level you're targeting.
+            </p>
+
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/register?next=%2Fgenerate"
+                className="inline-flex min-h-13 items-center justify-center gap-3 rounded-xl bg-indigo-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200/70 transition hover:-translate-y-0.5 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200"
+              >
+                Generate interview questions
+                <ArrowIcon />
+              </Link>
+
+              <a
+                href="#how-it-works"
+                className="inline-flex min-h-13 items-center justify-center rounded-xl border border-slate-200 bg-white px-7 py-3.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50/50"
+              >
+                See how it works
+              </a>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-medium text-slate-500">
+              <span className="flex items-center gap-2">
+                <span className="text-emerald-600">✓</span>
+                Role-specific questions
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="text-emerald-600">✓</span>
+                Customizable interviews
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="text-emerald-600">✓</span>
+                Evaluation criteria
+              </span>
+            </div>
+          </div>
+
+          {/* Product preview card */}
+          <div className="relative mx-auto w-full max-w-xl">
+            <div className="absolute -inset-5 rounded-[2rem] bg-indigo-100/60 blur-2xl" />
+
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-300/50">
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 font-bold text-white">
+                    Q
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">
+                      InterviewIQ
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Interview preview
+                    </p>
+                  </div>
+                </div>
+
+                <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-semibold text-emerald-700">
+                  SAMPLE OUTPUT
+                </span>
               </div>
 
-              {/* Job description */}
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <label
-                    htmlFor="jobDescription"
-                    className="block text-sm font-semibold text-slate-700"
-                  >
-                    Job description <span className="text-red-500">*</span>
-                  </label>
+              <div className="bg-slate-50/80 p-5 sm:p-6">
+                <div className="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm">
+                  <p className="text-[10px] font-bold tracking-wider text-indigo-600 uppercase">
+                    Target position
+                  </p>
+                  <h2 className="mt-1 text-lg font-bold text-slate-900">
+                    Junior Backend Developer
+                  </h2>
 
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-indigo-700">
+                      Junior
+                    </span>
+                    <span className="rounded-md bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">
+                      Technical
+                    </span>
+                    <span className="rounded-md bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">
+                      5 questions
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mb-4 mt-6 flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Generated questions
+                  </h3>
                   <span className="text-xs text-slate-400">
-                    {jobDescription.length}/10,000
+                    Example preview
                   </span>
                 </div>
 
-                <textarea
-                  id="jobDescription"
-                  name="jobDescription"
-                  required
-                  minLength={20}
-                  maxLength={10000}
-                  rows={7}
-                  value={jobDescription}
-                  onChange={(event) =>
-                    setJobDescription(event.target.value)
-                  }
-                  placeholder="Paste the job description here. Include responsibilities, required skills, qualifications, and other relevant details..."
-                  className="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
-                />
+                <div className="space-y-3">
+                  {sampleQuestions.map((question, index) => (
+                    <article
+                      key={question.category}
+                      className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                          Question 0{index + 1}
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${
+                            question.difficulty === "HARD"
+                              ? "bg-rose-50 text-rose-700"
+                              : question.difficulty === "MEDIUM"
+                                ? "bg-amber-50 text-amber-700"
+                                : "bg-emerald-50 text-emerald-700"
+                          }`}
+                        >
+                          {question.difficulty}
+                        </span>
+                      </div>
 
-                <p className="mt-2 text-xs text-slate-400">
-                  Include relevant details for more targeted questions.
-                </p>
-              </div>
+                      <p className="text-xs leading-6 font-semibold text-slate-800 sm:text-sm">
+                        {question.question}
+                      </p>
 
-              {/* Interview settings */}
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="experienceLevel"
-                    className="mb-2 block text-sm font-semibold text-slate-700"
-                  >
-                    Experience level
-                  </label>
+                      <p className="mt-3 text-[10px] font-semibold text-indigo-600">
+                        {question.category}
+                      </p>
 
-                  <select
-                    id="experienceLevel"
-                    name="experienceLevel"
-                    value={experienceLevel}
-                    onChange={(event) =>
-                      setExperienceLevel(
-                        event.target.value as ExperienceLevel,
-                      )
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
-                  >
-                    <option value="JUNIOR">Junior</option>
-                    <option value="MID">Mid-level</option>
-                    <option value="SENIOR">Senior</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="interviewType"
-                    className="mb-2 block text-sm font-semibold text-slate-700"
-                  >
-                    Interview type
-                  </label>
-
-                  <select
-                    id="interviewType"
-                    name="interviewType"
-                    value={interviewType}
-                    onChange={(event) =>
-                      setInterviewType(
-                        event.target.value as InterviewType,
-                      )
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
-                  >
-                    <option value="TECHNICAL">Technical</option>
-                    <option value="BEHAVIORAL">Behavioral</option>
-                    <option value="MIXED">Mixed</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Question count */}
-              <div>
-                <label
-                  htmlFor="questionCount"
-                  className="mb-2 block text-sm font-semibold text-slate-700"
-                >
-                  Number of questions
-                </label>
-
-                <select
-                  id="questionCount"
-                  name="questionCount"
-                  value={questionCount}
-                  onChange={(event) => setQuestionCount(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 sm:max-w-48"
-                >
-                  {[3, 5, 10, 15, 20].map((count) => (
-                    <option key={count} value={count}>
-                      {count} questions
-                    </option>
+                      <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                        <p className="text-[10px] font-bold text-slate-600">
+                          What a strong answer should demonstrate
+                        </p>
+                        <p className="mt-1 text-[10px] leading-5 text-slate-500">
+                          {question.criteria}
+                        </p>
+                      </div>
+                    </article>
                   ))}
-                </select>
-              </div>
-
-              {/* API error feedback */}
-              {errorMessage && (
-                <div
-                  role="alert"
-                  className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-                >
-                  <p className="font-semibold">{errorMessage}</p>
-
-                  {validationErrors.length > 0 && (
-                    <ul className="mt-2 list-inside list-disc space-y-1">
-                      {validationErrors.map((item, index) => (
-                        <li key={`${item.field}-${index}`}>
-                          {item.field}: {item.message}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </div>
-              )}
 
-              {/* Submit button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                    Generating questions...
-                  </>
-                ) : (
-                  <>
-                    <span>✦</span>
-                    Generate interview questions
-                  </>
-                )}
-              </button>
-
-              <p className="text-center text-xs text-slate-400">
-                Your job details are processed by our backend.
-              </p>
-            </form>
-          </section>
-
-          {/* Results panel */}
-          <aside className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  Generated questions
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Your personalized interview preparation.
+                <p className="mt-4 text-center text-[10px] text-slate-400">
+                  Illustrative questions · Actual results are generated from
+                  your job details
                 </p>
               </div>
+            </div>
 
-              <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500">
-                {generation ? "Generated" : "Preview"}
+            <div className="absolute -bottom-5 -left-4 hidden rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-xl sm:block lg:-left-8">
+              <p className="text-[10px] font-medium text-slate-400">
+                Preparation starts here
+              </p>
+              <p className="mt-1 text-sm font-bold text-slate-800">
+                Practice with purpose.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section
+        id="how-it-works"
+        className="scroll-mt-20 border-y border-slate-100 bg-slate-50/70"
+      >
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-bold tracking-[0.2em] text-indigo-600 uppercase">
+              Simple process
+            </p>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+              From job description to interview preparation
+            </h2>
+            <p className="mt-5 text-base leading-7 text-slate-600">
+              Turn the requirements of a job into a focused interview
+              preparation plan in three simple steps.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-6 md:grid-cols-3">
+            {steps.map((step) => (
+              <article
+                key={step.number}
+                className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/60"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-sm font-bold text-indigo-700">
+                  {step.number}
+                </span>
+
+                <h3 className="mt-6 text-lg font-bold text-slate-900">
+                  {step.title}
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  {step.description}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section
+        id="features"
+        className="scroll-mt-20 bg-white"
+      >
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
+          <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <div className="lg:sticky lg:top-28">
+              <p className="text-xs font-bold tracking-[0.2em] text-indigo-600 uppercase">
+                Built for better preparation
+              </p>
+
+              <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                More than a list of interview questions.
+              </h2>
+
+              <p className="mt-5 text-base leading-8 text-slate-600">
+                Good preparation starts with understanding the role. InterviewIQ
+                helps you focus on relevant questions and the skills behind
+                them, so you can prepare more deliberately.
+              </p>
+
+              <Link
+                href="/register?next=%2Fgenerate"
+                className="mt-8 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 transition hover:gap-3 hover:text-indigo-700"
+              >
+                Start preparing
+                <ArrowIcon />
+              </Link>
+            </div>
+
+            <div className="space-y-4">
+              {features.map((feature) => (
+                <article
+                  key={feature.number}
+                  className="flex gap-5 rounded-2xl border border-slate-200 bg-white p-6 transition hover:border-indigo-200 hover:bg-indigo-50/20 sm:p-7"
+                >
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-lg font-bold text-indigo-600">
+                    {feature.icon}
+                  </span>
+
+                  <div>
+                    <p className="text-[10px] font-bold tracking-wider text-indigo-500 uppercase">
+                      Feature {feature.number}
+                    </p>
+                    <h3 className="mt-2 text-lg font-bold text-slate-900">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">
+                      {feature.description}
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Question preview explanation */}
+      <section
+        id="preview"
+        className="scroll-mt-20 bg-slate-950"
+      >
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-20 sm:px-8 lg:grid-cols-2 lg:px-10 lg:py-24">
+          <div>
+            <p className="text-xs font-bold tracking-[0.2em] text-indigo-300 uppercase">
+              See what you can prepare for
+            </p>
+
+            <h2 className="mt-4 text-3xl leading-tight font-bold tracking-tight text-white sm:text-4xl">
+              Know the questions. Understand the expectations.
+            </h2>
+
+            <p className="mt-5 max-w-xl text-base leading-8 text-slate-300">
+              Your results are organized by question number, category, and
+              difficulty. Evaluation criteria help you identify the concepts
+              and skills you should demonstrate in your answers.
+            </p>
+
+            <Link
+              href="/register?next=%2Fgenerate"
+              className="mt-8 inline-flex items-center gap-3 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50"
+            >
+              Try the question generator
+              <ArrowIcon />
+            </Link>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-6 sm:p-8">
+            <div className="flex items-center justify-between border-b border-white/10 pb-5">
+              <div>
+                <p className="text-sm font-bold text-white">
+                  What you receive
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  An example of the generated output
+                </p>
+              </div>
+              <span className="rounded-lg bg-emerald-400/10 px-3 py-1.5 text-[10px] font-bold text-emerald-300">
+                STRUCTURED RESULTS
               </span>
             </div>
 
-            {loading ? (
-              <div
-                role="status"
-                className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-indigo-200 bg-indigo-50/50 px-6 py-12 text-center"
-              >
-                <div className="mb-5 h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
-
-                <h3 className="text-base font-semibold text-slate-800">
-                  Generating your questions
-                </h3>
-
-                <p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">
-                  Gemini is analyzing the job details and preparing tailored
-                  interview questions. This may take a few seconds.
-                </p>
-              </div>
-            ) : generation ? (
-              <div aria-live="polite" className="space-y-4">
-                <div className="rounded-xl bg-indigo-50 p-4">
-                  <p className="text-sm font-semibold text-indigo-900">
-                    {generation.jobTitle}
-                  </p>
-
-                  <p className="mt-1 text-xs text-indigo-700">
-                    {generation.experienceLevel.toLowerCase()} ·{" "}
-                    {generation.interviewType.toLowerCase()} ·{" "}
-                    {generation.questions.length} questions
-                  </p>
-                </div>
-
-                {generation.questions.map((question) => (
-                  <article
-                    key={question.id}
-                    className="rounded-xl border border-slate-200 p-4"
-                  >
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        Question {question.position}
-                      </span>
-
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                        {question.difficulty}
-                      </span>
-                    </div>
-
-                    <h3 className="text-sm font-semibold leading-6 text-slate-900">
-                      {question.question}
-                    </h3>
-
-                    <div className="mt-3">
-                      <span className="text-xs font-semibold text-indigo-600">
-                        {question.category}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 rounded-lg bg-slate-50 p-3">
-                      <p className="mb-1 text-xs font-semibold text-slate-700">
-                        Evaluation criteria
-                      </p>
-
-                      <p className="text-xs leading-5 text-slate-600">
-                        {question.evaluationCriteria}
-                      </p>
-                    </div>
-                  </article>
-                ))}
-
-                {/* Gemini usage and performance metadata */}
-                {generation.usage && (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <h3 className="text-sm font-semibold text-slate-800">
-                      Generation details
-                    </h3>
-
-                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <p className="text-slate-400">Model</p>
-                        <p className="mt-1 font-medium text-slate-700">
-                          {generation.model}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-slate-400">Response time</p>
-                        <p className="mt-1 font-medium text-slate-700">
-                          {generation.usage.latencyMs} ms
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-slate-400">Input tokens</p>
-                        <p className="mt-1 font-medium text-slate-700">
-                          {generation.usage.inputTokens ?? "Unavailable"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-slate-400">Output tokens</p>
-                        <p className="mt-1 font-medium text-slate-700">
-                          {generation.usage.outputTokens ?? "Unavailable"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-slate-400">Total tokens</p>
-                        <p className="mt-1 font-medium text-slate-700">
-                          {generation.usage.totalTokens ?? "Unavailable"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-slate-400">Provider</p>
-                        <p className="mt-1 font-medium capitalize text-slate-700">
-                          {generation.provider}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-12 text-center">
-                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-3xl text-indigo-500">
-                  ✧
-                </div>
-
-                <h3 className="text-base font-semibold text-slate-800">
-                  Your questions will appear here
-                </h3>
-
-                <p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">
-                  Complete the interview details and generate your questions.
-                  They will be organized by category and difficulty.
-                </p>
-              </div>
-            )}
-
-            {/* What the user can expect */}
-            {!generation && !loading && (
-              <div className="mt-6">
-                <h3 className="mb-4 text-sm font-semibold text-slate-700">
-                  What you&apos;ll get
-                </h3>
-
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-sm text-emerald-600">
-                      ✓
-                    </span>
-
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">
-                        Role-specific questions
-                      </p>
-
-                      <p className="mt-0.5 text-xs leading-5 text-slate-500">
-                        Questions tailored to the job requirements.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm text-blue-600">
-                      ✓
-                    </span>
-
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">
-                        Difficulty levels
-                      </p>
-
-                      <p className="mt-0.5 text-xs leading-5 text-slate-500">
-                        Easy, medium, and challenging questions.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-sm text-amber-600">
-                      ✓
-                    </span>
-
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">
-                        Evaluation criteria
-                      </p>
-
-                      <p className="mt-0.5 text-xs leading-5 text-slate-500">
-                        Understand what a strong answer should demonstrate.
-                      </p>
-                    </div>
+            <div className="mt-6 space-y-5">
+              {[
+                ["01", "Question", "A role-specific interview question."],
+                ["02", "Category", "The skill or subject being assessed."],
+                ["03", "Difficulty", "Easy, medium, or hard."],
+                [
+                  "04",
+                  "Evaluation criteria",
+                  "The qualities of a strong answer.",
+                ],
+              ].map(([number, title, description]) => (
+                <div key={number} className="flex items-start gap-4">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-indigo-200">
+                    {number}
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">{title}</h3>
+                    <p className="mt-1 text-xs leading-6 text-slate-400">
+                      {description}
+                    </p>
                   </div>
                 </div>
-              </div>
-            )}
-          </aside>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Final call to action */}
+      <section className="bg-white px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-3xl bg-indigo-600 px-7 py-14 text-center shadow-xl shadow-indigo-200/60 sm:px-12 sm:py-16">
+          <p className="text-xs font-bold tracking-[0.2em] text-indigo-200 uppercase">
+            Your next interview starts with preparation
+          </p>
+
+          <h2 className="mx-auto mt-5 max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Make your preparation count.
+          </h2>
+
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-indigo-100 sm:text-base">
+            Explore the tool, create your account when you're ready, and
+            generate interview questions tailored to the opportunity you're
+            pursuing.
+          </p>
+
+          <Link
+            href="/register?next=%2Fgenerate"
+            className="mt-8 inline-flex items-center justify-center gap-3 rounded-xl bg-white px-7 py-3.5 text-sm font-bold text-indigo-700 transition hover:-translate-y-0.5 hover:bg-indigo-50"
+          >
+            Get started
+            <ArrowIcon />
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-100 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-10">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
+              Q
+            </span>
+            <span className="font-bold tracking-tight text-slate-800">
+              Interview<span className="text-indigo-600">IQ</span>
+            </span>
+          </Link>
+
+          <p className="text-xs text-slate-500">
+            AI-powered interview preparation.
+          </p>
+
+          <div className="flex items-center gap-5 text-xs font-medium text-slate-500">
+            <Link
+              href="/login?next=%2Fgenerate"
+              className="transition hover:text-indigo-600"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/register?next=%2Fgenerate"
+              className="transition hover:text-indigo-600"
+            >
+              Create account
+            </Link>
+          </div>
         </div>
 
-        <footer className="mt-10 border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-          InterviewIQ · AI-powered interview preparation
-        </footer>
-      </main>
-    </div>
+        <div className="border-t border-slate-100 py-4 text-center text-[11px] text-slate-400">
+          © 2026 InterviewIQ. All rights reserved.
+        </div>
+      </footer>
+    </main>
   );
 }
