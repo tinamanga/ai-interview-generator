@@ -15,6 +15,7 @@ import jwt from "@fastify/jwt";
 const mocks = vi.hoisted(() => ({
   registerUser: vi.fn(),
   authenticateUser: vi.fn(),
+  getUserById: vi.fn(),
   createRefreshSession: vi.fn(),
   rotateRefreshToken: vi.fn(),
   revokeRefreshToken: vi.fn()
@@ -23,6 +24,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../src/services/auth.service.js", () => ({
   registerUser: mocks.registerUser,
   authenticateUser: mocks.authenticateUser,
+  getUserById: mocks.getUserById,
   EmailAlreadyRegisteredError: class EmailAlreadyRegisteredError extends Error {}
 }));
 
@@ -117,7 +119,10 @@ describe("Authentication routes", () => {
         })
       );
 
-      const token = await app.jwt.verify(body.data.accessToken);
+      const token = await app.jwt.verify<{
+        sub: string;
+        email: string;
+      }>(body.data.accessToken);
 
       expect(token.sub).toBe(validUser.id);
       expect(token.email).toBe(validUser.email);
@@ -213,8 +218,10 @@ describe("Authentication routes", () => {
         expect.any(Object)
       );
 
-      const token = await app.jwt.verify(body.data.accessToken);
-
+      const token = await app.jwt.verify<{
+        sub: string;
+        email: string;
+      }>(body.data.accessToken);
       expect(token.sub).toBe(validUser.id);
 
       expect(response.headers["set-cookie"]).toContain(
@@ -285,7 +292,10 @@ describe("Authentication routes", () => {
         expect.any(Object)
       );
 
-      const token = await app.jwt.verify(body.data.accessToken);
+      const token = await app.jwt.verify<{
+        sub: string;
+        email: string;
+      }>(body.data.accessToken);
 
       expect(token.sub).toBe(validUser.id);
 
@@ -411,6 +421,85 @@ describe("Authentication routes", () => {
       expect(response.statusCode).toBe(403);
       expect(response.json().error.code).toBe("INVALID_ORIGIN");
       expect(mocks.revokeRefreshToken).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("GET /api/v1/auth/me", () => {
+    it("returns the authenticated user's public profile", async () => {
+      mocks.getUserById.mockResolvedValue(validUser);
+
+      const accessToken = app.jwt.sign({
+        sub: validUser.id,
+        email: validUser.email
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/v1/auth/me",
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const body = response.json();
+
+      expect(body.success).toBe(true);
+      expect(body.data.user).toEqual({
+        id: validUser.id,
+        email: validUser.email,
+        createdAt: validUser.createdAt.toISOString()
+      });
+
+      expect(body.data.user.passwordHash).toBeUndefined();
+      expect(mocks.getUserById).toHaveBeenCalledWith(validUser.id);
+    });
+
+    it("rejects requests without an access token", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/v1/auth/me"
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe("UNAUTHENTICATED");
+      expect(mocks.getUserById).not.toHaveBeenCalled();
+    });
+
+    it("rejects an invalid access token", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/v1/auth/me",
+        headers: {
+          authorization: "Bearer invalid-token"
+        }
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe("UNAUTHENTICATED");
+      expect(mocks.getUserById).not.toHaveBeenCalled();
+    });
+
+    it("rejects a valid token when its user account no longer exists", async () => {
+      mocks.getUserById.mockResolvedValue(null);
+
+      const accessToken = app.jwt.sign({
+        sub: validUser.id,
+        email: validUser.email
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/v1/auth/me",
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe("UNAUTHENTICATED");
+      expect(mocks.getUserById).toHaveBeenCalledWith(validUser.id);
     });
   });
 });

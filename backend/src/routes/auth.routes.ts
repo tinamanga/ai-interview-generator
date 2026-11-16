@@ -5,6 +5,7 @@ import { env } from "../config/env.js";
 import {
   authenticateUser,
   EmailAlreadyRegisteredError,
+  getUserById,
   registerUser
 } from "../services/auth.service.js";
 
@@ -361,6 +362,75 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   });
+
+  // Return the public profile of the currently authenticated user.
+  fastify.get("/auth/me", async (request, reply) => {
+    // Verify the access token before accessing the user's account.
+
+    let userId: string;
+
+    try {
+      // Verify the token and retrieve its typed payload.
+      const payload = await request.jwtVerify<{ sub?: string }>();
+
+      if (typeof payload.sub !== "string" || !payload.sub) {
+        return reply.code(401).send({
+          success: false,
+          error: {
+            code: "UNAUTHENTICATED",
+            message: "A valid access token is required."
+          }
+        });
+      }
+
+      userId = payload.sub;
+    } catch {
+      return reply.code(401).send({
+        success: false,
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "A valid access token is required."
+        }
+      });
+    }
+
+
+
+    try {
+      const user = await getUserById(userId);
+
+      if (!user) {
+        return reply.code(401).send({
+          success: false,
+          error: {
+            code: "UNAUTHENTICATED",
+            message: "The account associated with this session no longer exists."
+          }
+        });
+      }
+
+      return reply.code(200).send({
+        success: true,
+        data: {
+          user
+        }
+      });
+    } catch (error) {
+      request.log.error(
+        { err: error },
+        "Unable to retrieve authenticated user"
+      );
+
+      return reply.code(500).send({
+        success: false,
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to retrieve your account at this time."
+        }
+      });
+    }
+  });
+
 };
 
 export default authRoutes;

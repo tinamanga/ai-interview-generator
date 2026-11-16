@@ -90,3 +90,21 @@ export async function authenticateUser(
     createdAt: user.createdAt
   };
 }
+
+// Retrieve safe public account details using the authenticated user's ID.
+export async function getUserById(
+  userId: string
+): Promise<PublicUser | null> {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId
+    },
+    select: {
+      id: true,
+      email: true,
+      createdAt: true
+    }
+  });
+
+  return user;
+}
