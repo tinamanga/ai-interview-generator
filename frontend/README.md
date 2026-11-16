@@ -1,139 +1,243 @@
-# Frontend – AI Interview Questions Generator
+# InterviewIQ Frontend
 
-The frontend is the user-facing interface for the AI Interview Questions Generator.
+The InterviewIQ frontend is a web application built with Next.js, React, TypeScript, and Tailwind CSS.
 
-It allows users to enter job information, select interview preferences and generate tailored interview questions through the backend REST API.
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Technology Stack](#technology-stack)
-- [Features](#features)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Running the Application](#running-the-application)
-- [Backend Integration](#backend-integration)
-- [Application Workflow](#application-workflow)
-- [Build and Linting](#build-and-linting)
-
-## Overview
-
-The frontend is built with Next.js, React, TypeScript and Tailwind CSS.
-
-It communicates with the backend API to generate and display interview questions based on:
-
-- Job title.
-- Job description.
-- Candidate experience level.
-- Interview type.
-- Requested question count.
-
-The interface also displays question categories, difficulty levels, evaluation criteria and available AI usage metadata.
+It provides the public landing page, user authentication screens, and the interview question generation workspace.
 
 ## Technology Stack
 
-| Technology | Purpose |
-|---|---|
-| Next.js 16 | React application framework |
-| React 19 | UI development |
-| TypeScript | Type-safe development |
-| Tailwind CSS 4 | Styling |
-| ESLint | Code quality and linting |
-
-## Features
-
-- Job title input.
-- Job description input.
-- Experience level selection.
-- Technical, behavioral and mixed interview types.
-- Configurable question count.
-- Backend API integration.
-- Loading state during generation.
-- Form validation and error handling.
-- Generated question display.
-- Question difficulty and evaluation criteria.
-- AI model and usage metadata display where available.
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- ESLint
 
 ## Project Structure
 
 ```text
 frontend/
-├── public/
-│
 ├── src/
 │   ├── app/
-│   │   ├── favicon.ico
+│   │   ├── generate/
+│   │   │   └── page.tsx
+│   │   ├── login/
+│   │   │   └── page.tsx
+│   │   ├── register/
+│   │   │   └── page.tsx
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   └── page.tsx
-│   │
-│   └── lib/
-│       └── interview-api.ts
-│
+│   ├── components/
+│   │   └── auth-form.tsx
+│   ├── lib/
+│   │   ├── auth-api.ts
+│   │   ├── auth-redirect.ts
+│   │   ├── difficulty.ts
+│   │   └── interview-api.ts
+│   └── providers/
+│       └── auth-provider.tsx
+├── public/
 ├── .env.local
-├── .gitignore
-├── eslint.config.mjs
-├── next.config.ts
 ├── package.json
-├── package-lock.json
 └── tsconfig.json
 ```
 
-### Important files
+## Application Routes
 
-| File | Responsibility |
-|---|---|
-| `src/app/page.tsx` | Main application interface and generation form |
-| `src/app/layout.tsx` | Root layout and page metadata |
-| `src/app/globals.css` | Global styling |
-| `src/lib/interview-api.ts` | Backend API client |
-| `next.config.ts` | Next.js configuration |
-| `tsconfig.json` | TypeScript configuration |
+| Route | Description | Access |
+|---|---|---|
+| `/` | Public landing page and product introduction | Public |
+| `/register` | Account registration | Public |
+| `/login` | User login | Public |
+| `/generate` | Interview question generation workspace | Frontend authentication required |
 
-## Prerequisites
+## User Journey
 
-Install:
+1. A visitor opens the public landing page.
+2. The visitor can explore the features and sample questions without registering.
+3. When the visitor chooses to generate questions, they are directed to register or log in.
+4. After successful authentication, the visitor is redirected to the generator.
+5. The signed-in user enters the job details and generation preferences.
+6. The frontend submits the request to the backend.
+7. The generated questions and their metadata are displayed in the workspace.
+8. The user can log out from the generator navigation.
 
-- Node.js 24 or a compatible modern version.
-- npm.
-- Git.
-- A running instance of the backend API.
+## Features
 
-## Getting Started
+### Public landing page
 
-### 1. Navigate to the frontend
+The landing page introduces InterviewIQ and explains:
 
-```bash
-cd frontend
+- What the application does.
+- How AI-generated interview preparation works.
+- The available question categories and difficulty levels.
+- The expected generation workflow.
+- Sample interview questions.
+
+The landing page does not require an account.
+
+### Authentication
+
+The application includes:
+
+- Registration form.
+- Login form.
+- Client-side form validation and backend error display.
+- Password visibility control.
+- Session restoration when the application starts.
+- Logout action.
+- Safe post-authentication redirects.
+
+The authentication form uses the shared component:
+
+```text
+src/components/auth-form.tsx
 ```
 
-### 2. Install dependencies
+### Interview generation workspace
 
-```bash
-npm install
+The generator allows users to provide:
+
+- Job title.
+- Job description.
+- Candidate experience level.
+- Interview type.
+- Number of questions.
+
+Available experience levels:
+
+- Junior
+- Mid-level
+- Senior
+
+Available interview types:
+
+- Technical
+- Behavioral
+- Mixed
+
+The question count can be selected from 3, 5, 10, 15, or 20.
+
+Generated results display:
+
+- Question number.
+- Question text.
+- Category.
+- Difficulty.
+- Evaluation criteria.
+- AI provider and model information.
+- Response latency.
+- Input, output, and total token usage when available.
+
+Difficulty badges use a shared helper to keep the same visual styling throughout the application:
+
+```text
+src/lib/difficulty.ts
 ```
 
-### 3. Configure environment variables
+## Authentication Architecture
 
-Create a local environment file:
+Authentication state is managed through:
 
-```bash
-touch .env.local
+```text
+src/providers/auth-provider.tsx
 ```
 
-Add the backend API URL:
+The provider exposes:
+
+- `user`
+- `accessToken`
+- `status`
+- `login()`
+- `register()`
+- `logout()`
+
+Authentication status can be:
+
+- `loading`
+- `authenticated`
+- `unauthenticated`
+
+### Session restoration
+
+When the application starts, the auth provider calls the backend refresh endpoint.
+
+If the refresh cookie is valid, the backend rotates the refresh session and returns a new access token and user profile.
+
+The provider stores the access token in React application state. It does not store the access token in local storage.
+
+### Refresh-token cookie
+
+The refresh token is managed by the backend through an HTTP-only cookie. Frontend authentication requests use:
+
+```ts
+credentials: "include"
+```
+
+This allows the browser to send the cookie to the backend.
+
+### Logout
+
+The generator navigation includes a logout button.
+
+The frontend sends a request to the backend logout endpoint. The backend revokes the current refresh session and clears the cookie. The frontend then clears its local authentication state and redirects to the login page.
+
+### Protected generator page
+
+The generator page checks the authentication provider's status before rendering the workspace.
+
+Unauthenticated visitors are redirected to:
+
+```text
+/login?next=%2Fgenerate
+```
+
+The application uses a safe redirect helper to avoid accepting unsafe external redirect destinations.
+
+**Important:** this is frontend route protection. The backend interview generation endpoint has not yet been updated to require a JWT. API-level authentication and user ownership enforcement remain pending.
+
+## Backend API Configuration
+
+The frontend communicates with the Fastify backend through:
+
+```text
+src/lib/auth-api.ts
+src/lib/interview-api.ts
+```
+
+Create `frontend/.env.local`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
 ```
 
-The frontend uses this URL to communicate with the backend.
+The variable must contain the backend base URL, including `/api/v1`.
 
-Do not put the Gemini API key or database credentials in this file.
+For production, replace the local URL with the deployed backend API base URL.
 
-### 4. Start the development server
+The `NEXT_PUBLIC_` prefix means this value is available in browser-side code. Never put private credentials, database passwords, JWT secrets, or Gemini API keys in frontend environment variables.
+
+## Local Development
+
+### 1. Install dependencies
+
+From the frontend directory:
+
+```bash
+npm install
+```
+
+### 2. Configure the API URL
+
+Create or update `.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
+```
+
+Ensure the backend is running and its `FRONTEND_URL` is configured to match the frontend origin.
+
+### 3. Start the development server
 
 ```bash
 npm run dev
@@ -141,111 +245,78 @@ npm run dev
 
 Open:
 
-`http://localhost:3000`
+```text
+http://localhost:3000
+```
 
-Make sure the backend is also running.
+## NPM Scripts
 
-## Environment Variables
-
-| Variable | Description |
+| Command | Description |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | Base URL of the backend API |
+| `npm run dev` | Start the Next.js development server |
+| `npm run build` | Create an optimized production build |
+| `npm start` | Start the production server |
+| `npm run lint` | Run ESLint |
 
-Example local development configuration:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
-```
-
-The `NEXT_PUBLIC_` prefix means the value can be included in browser-side code. Therefore, only public configuration such as the backend URL should use this prefix.
-
-Never expose private API credentials through frontend environment variables.
-
-## Running the Application
-
-Start the development server:
+Run TypeScript checks with:
 
 ```bash
-npm run dev
+npx tsc --noEmit
 ```
 
-Create a production build:
+## Quality Checks
 
-```bash
-npm run build
-```
-
-Start the production server:
-
-```bash
-npm start
-```
-
-## Backend Integration
-
-The frontend communicates with the backend through the API client located at:
-
-`src/lib/interview-api.ts`
-
-The API client sends requests to:
-
-`POST /interviews/generate`
-
-The complete local development endpoint is:
-
-`http://localhost:5000/api/v1/interviews/generate`
-
-Example request:
-
-```json
-{
-  "jobTitle": "Junior Backend Developer",
-  "jobDescription": "Looking for a developer with Node.js and PostgreSQL experience.",
-  "experienceLevel": "JUNIOR",
-  "interviewType": "TECHNICAL",
-  "questionCount": 5
-}
-```
-
-The frontend handles:
-
-- Successful API responses.
-- API validation errors.
-- Rate-limit responses.
-- Provider errors.
-- Network failures.
-
-Generated questions are rendered from the backend response rather than generated directly in the browser.
-
-## Application Workflow
-
-1. The user enters a job title and job description.
-2. The user selects an experience level.
-3. The user selects an interview type.
-4. The user chooses the number of questions.
-5. The frontend validates the form.
-6. The API client sends the request to the backend.
-7. The backend generates and saves the questions.
-8. The frontend displays the returned questions and available usage information.
-
-## Build and Linting
-
-### Run ESLint
+Before committing frontend changes, run:
 
 ```bash
 npm run lint
-```
-
-### Create a production build
-
-```bash
+npx tsc --noEmit
 npm run build
 ```
 
-The production build runs compilation, TypeScript checks and static page generation.
+All three checks should complete successfully.
 
----
+## Production Deployment
 
-**Frontend development:** Christina Manga
-**Project:** AI Interview Questions Generator
-**Repository:** [GitHub](https://github.com/tinamanga/ai-interview-generator)
+The frontend deployment target is Vercel.
+
+Set the project root directory to:
+
+```text
+frontend
+```
+
+Configure this environment variable in Vercel:
+
+```env
+NEXT_PUBLIC_API_URL=https://YOUR-BACKEND-DOMAIN/api/v1
+```
+
+Replace the example with the actual deployed backend API URL.
+
+The backend must also have its `FRONTEND_URL` configured to the exact deployed frontend origin.
+
+For production authentication cookies, the backend uses:
+
+- `HttpOnly`
+- `Secure`
+- `SameSite=None`
+
+The frontend and backend must use HTTPS for the production cross-origin cookie flow.
+
+After changing frontend environment variables in Vercel, redeploy the application so the new configuration is included in the build.
+
+## Development Roadmap
+
+- [x] Public landing page.
+- [x] Interview generation workspace.
+- [x] Backend API integration.
+- [x] Shared question difficulty styling.
+- [x] Registration and login screens.
+- [x] Authentication provider and session restoration.
+- [x] Protected generator page.
+- [x] Logout control.
+- [ ] Send access tokens with generation requests after backend JWT protection is implemented.
+- [ ] Handle access-token expiry and refresh for authenticated API requests.
+- [ ] Add authenticated generation history.
+- [ ] Add end-to-end frontend authentication and generation tests.
