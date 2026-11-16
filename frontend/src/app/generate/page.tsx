@@ -1,8 +1,10 @@
 
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/providers/auth-provider";
 import { getDifficultyBadgeClass } from "@/lib/difficulty";
 
 import {
@@ -14,6 +16,16 @@ import {
 } from "@/lib/interview-api";
 
 export default function Home() {
+  const router = useRouter();
+  const { status } = useAuth();
+
+  // Redirect visitors who do not have an authenticated session.
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login?next=%2Fgenerate");
+    }
+  }, [status, router]);
+
   // Form state
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -64,6 +76,23 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (status !== "authenticated") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f7f8fc] px-5">
+        <div className="text-center">
+          <div
+            className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-indigo-100 border-t-indigo-600"
+            role="status"
+            aria-label="Checking your session"
+          />
+          <p className="mt-4 text-sm font-medium text-slate-600">
+            Checking your session...
+          </p>
+        </div>
+      </main>
+    );
   }
 
   return (
