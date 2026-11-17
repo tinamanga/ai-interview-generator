@@ -31,3 +31,24 @@ export const generateInterviewSchema = z.object({
 export type GenerateInterviewRequest = z.infer<
   typeof generateInterviewSchema
 >;
+
+// Validate pagination parameters for interview history.
+export const interviewHistoryQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(1),
+
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .default(10)
+}).strict();
+
+// Validate the ID used to retrieve a saved interview.
+export const interviewIdParamsSchema = z.object({
+  id: z.string().uuid("A valid interview ID is required.")
+}).strict();

@@ -65,3 +65,86 @@ export async function saveGeneration(input: SaveGenerationInput) {
     }
   });
 }
+
+// Returns a paginated list of successful interviews belonging to one user.
+export async function listUserGenerations(
+  userId: string,
+  page: number,
+  limit: number
+) {
+  const skip = (page - 1) * limit;
+
+  const [interviews, total] = await prisma.$transaction([
+    prisma.generation.findMany({
+      where: {
+        userId,
+        status: GenerationStatus.SUCCEEDED
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        jobTitle: true,
+        experienceLevel: true,
+        interviewType: true,
+        questionCount: true,
+        createdAt: true,
+        completedAt: true,
+        _count: {
+          select: {
+            questions: true
+          }
+        }
+      }
+    }),
+    prisma.generation.count({
+      where: {
+        userId,
+        status: GenerationStatus.SUCCEEDED
+      }
+    })
+  ]);
+
+  return { interviews, total };
+}
+
+// Returns one interview only when it belongs to the requesting user.
+export async function findUserGenerationById(
+  userId: string,
+  generationId: string
+) {
+  return prisma.generation.findFirst({
+    where: {
+      id: generationId,
+      userId,
+      status: GenerationStatus.SUCCEEDED
+    },
+    select: {
+      id: true,
+      jobTitle: true,
+      jobDescription: true,
+      experienceLevel: true,
+      interviewType: true,
+      questionCount: true,
+      createdAt: true,
+      completedAt: true,
+      questions: {
+        orderBy: {
+          position: "asc"
+        },
+        select: {
+          id: true,
+          position: true,
+          question: true,
+          category: true,
+          difficulty: true,
+          evaluationCriteria: true,
+          createdAt: true
+        }
+      }
+    }
+  });
+}
