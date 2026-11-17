@@ -152,6 +152,13 @@ export default function Home() {
               {user?.email}
             </span>
 
+            <Link
+              href="/history"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50"
+            >
+              My Interviews
+            </Link>
+
             <button
               type="button"
               onClick={handleLogout}
