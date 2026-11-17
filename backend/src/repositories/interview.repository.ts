@@ -7,6 +7,7 @@ import {
 
 import { prisma } from "../db/prisma.js";
 import type { GenerateInterviewQuestionsResult } from "../services/interview.service.js";
+import type { InterviewHistoryQuery } from "../schemas/interview.schema.js";
 
 // Input required to persist a completed interview generation.
 type SaveGenerationInput = {
@@ -70,16 +71,35 @@ export async function saveGeneration(input: SaveGenerationInput) {
 export async function listUserGenerations(
   userId: string,
   page: number,
-  limit: number
+  limit: number,
+  filters: Pick<InterviewHistoryQuery, "search" | "interviewType" | "experienceLevel"> = {}
 ) {
   const skip = (page - 1) * limit;
 
+  // Use the same conditions for both records and count so pagination
+  // reflects the filtered results rather than the full history.
+  const where = {
+    userId,
+    status: GenerationStatus.SUCCEEDED,
+    ...(filters.search
+      ? {
+          jobTitle: {
+            contains: filters.search,
+            mode: "insensitive" as const
+          }
+        }
+      : {}),
+    ...(filters.interviewType
+      ? { interviewType: filters.interviewType }
+      : {}),
+    ...(filters.experienceLevel
+      ? { experienceLevel: filters.experienceLevel }
+      : {})
+  };
+
   const [interviews, total] = await prisma.$transaction([
     prisma.generation.findMany({
-      where: {
-        userId,
-        status: GenerationStatus.SUCCEEDED
-      },
+      where,
       orderBy: {
         createdAt: "desc"
       },
@@ -101,10 +121,7 @@ export async function listUserGenerations(
       }
     }),
     prisma.generation.count({
-      where: {
-        userId,
-        status: GenerationStatus.SUCCEEDED
-      }
+      where
     })
   ]);
 

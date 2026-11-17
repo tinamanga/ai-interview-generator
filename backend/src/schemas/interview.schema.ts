@@ -45,8 +45,24 @@ export const interviewHistoryQuerySchema = z.object({
     .int()
     .min(1)
     .max(50)
-    .default(10)
+    .default(10),
+
+  search: z.string()
+    .trim()
+    .max(150, "Search cannot exceed 150 characters.")
+    .optional(),
+
+  interviewType: z.enum(["TECHNICAL", "BEHAVIORAL", "MIXED"])
+    .optional(),
+
+  experienceLevel: z.enum(["JUNIOR", "MID", "SENIOR"])
+    .optional()
 }).strict();
+
+// Reuse the validated filter type in the repository and route.
+export type InterviewHistoryQuery = z.infer<
+  typeof interviewHistoryQuerySchema
+>;
 
 // Validate the ID used to retrieve a saved interview.
 export const interviewIdParamsSchema = z.object({

@@ -92,7 +92,7 @@ const interviewRoutes: FastifyPluginAsync = async (fastify) => {
         success: false,
         error: {
           code: "VALIDATION_ERROR",
-          message: "The pagination parameters are invalid.",
+          message: "The interview history filters are invalid.",
           details: validation.error.issues.map((issue) => ({
             field: issue.path.join("."),
             message: issue.message
@@ -102,12 +102,19 @@ const interviewRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      const { page, limit } = validation.data;
+      const {
+        page,
+        limit,
+        search,
+        interviewType,
+        experienceLevel
+      } = validation.data;
 
       const { interviews, total } = await listUserGenerations(
         request.user.sub,
         page,
-        limit
+        limit,
+        { search, interviewType, experienceLevel }
       );
 
       return reply.code(200).send({

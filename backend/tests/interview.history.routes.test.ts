@@ -156,7 +156,12 @@ import {
         expect(mocks.listUserGenerations).toHaveBeenCalledWith(
           userA.id,
           2,
-          10
+          10,
+          {
+            search: undefined,
+            interviewType: undefined,
+            experienceLevel: undefined
+          }
         );
       });
   
@@ -177,7 +182,12 @@ import {
         expect(mocks.listUserGenerations).toHaveBeenCalledWith(
           userA.id,
           1,
-          10
+          10,
+          {
+            search: undefined,
+            interviewType: undefined,
+            experienceLevel: undefined
+          }
         );
   
         expect(response.json().data.pagination).toEqual({
@@ -188,6 +198,96 @@ import {
         });
       });
   
+      it("passes search and filters to the repository", async () => {
+        mocks.listUserGenerations.mockResolvedValue({
+          interviews: [mockInterview],
+          total: 1
+        });
+
+        const response = await app.inject({
+          method: "GET",
+          url: "/api/v1/interviews?search=backend&interviewType=TECHNICAL&experienceLevel=JUNIOR",
+          headers: getAuthHeaders(userA)
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        expect(mocks.listUserGenerations).toHaveBeenCalledWith(
+          userA.id,
+          1,
+          10,
+          {
+            search: "backend",
+            interviewType: "TECHNICAL",
+            experienceLevel: "JUNIOR"
+          }
+        );
+      });
+
+      it("trims whitespace from the search term", async () => {
+        mocks.listUserGenerations.mockResolvedValue({
+          interviews: [],
+          total: 0
+        });
+
+        const response = await app.inject({
+          method: "GET",
+          url: "/api/v1/interviews?search=%20%20backend%20%20",
+          headers: getAuthHeaders()
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        expect(mocks.listUserGenerations).toHaveBeenCalledWith(
+          userA.id,
+          1,
+          10,
+          {
+            search: "backend",
+            interviewType: undefined,
+            experienceLevel: undefined
+          }
+        );
+      });
+
+      it("rejects unsupported interview type filters", async () => {
+        const response = await app.inject({
+          method: "GET",
+          url: "/api/v1/interviews?interviewType=CASUAL",
+          headers: getAuthHeaders()
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json().error.code).toBe("VALIDATION_ERROR");
+        expect(mocks.listUserGenerations).not.toHaveBeenCalled();
+      });
+
+      it("rejects unsupported experience level filters", async () => {
+        const response = await app.inject({
+          method: "GET",
+          url: "/api/v1/interviews?experienceLevel=EXPERT",
+          headers: getAuthHeaders()
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json().error.code).toBe("VALIDATION_ERROR");
+        expect(mocks.listUserGenerations).not.toHaveBeenCalled();
+      });
+
+      it("rejects search terms longer than 150 characters", async () => {
+        const search = "a".repeat(151);
+
+        const response = await app.inject({
+          method: "GET",
+          url: `/api/v1/interviews?search=${search}`,
+          headers: getAuthHeaders()
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json().error.code).toBe("VALIDATION_ERROR");
+        expect(mocks.listUserGenerations).not.toHaveBeenCalled();
+      });
+
       it("rejects invalid pagination parameters", async () => {
         const response = await app.inject({
           method: "GET",
@@ -218,7 +318,12 @@ import {
         expect(mocks.listUserGenerations).toHaveBeenCalledWith(
           userB.id,
           1,
-          10
+          10,
+          {
+            search: undefined,
+            interviewType: undefined,
+            experienceLevel: undefined
+          }
         );
       });
   
