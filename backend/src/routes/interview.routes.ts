@@ -32,6 +32,34 @@ function getGeminiHttpStatus(code: GeminiIntegrationError["code"]): number {
 
 const interviewRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post("/interviews/generate", {
+    // Verify the access token before validating input or calling Gemini.
+    preHandler: async (request, reply) => {
+      try {
+        await request.jwtVerify();
+
+        if (
+          typeof request.user.sub !== "string" ||
+          request.user.sub.length === 0
+        ) {
+          return reply.code(401).send({
+            success: false,
+            error: {
+              code: "UNAUTHENTICATED",
+              message: "A valid access token is required."
+            }
+          });
+        }
+      } catch {
+        return reply.code(401).send({
+          success: false,
+          error: {
+            code: "UNAUTHENTICATED",
+            message: "A valid access token is required."
+          }
+        });
+      }
+    },
+
     // AI generation is more expensive than ordinary API requests.
     // Apply a stricter limit to protect provider usage.
     config: {
@@ -65,6 +93,7 @@ const interviewRoutes: FastifyPluginAsync = async (fastify) => {
       // Step 3: Persist the generation and related records.
       const generation = await saveGeneration({
         ...validation.data,
+        userId: request.user.sub,
         result
       });
 

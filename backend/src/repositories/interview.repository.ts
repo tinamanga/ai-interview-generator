@@ -10,6 +10,7 @@ import type { GenerateInterviewQuestionsResult } from "../services/interview.ser
 
 // Input required to persist a completed interview generation.
 type SaveGenerationInput = {
+  userId: string;
   jobTitle: string;
   jobDescription: string;
   experienceLevel: ExperienceLevel;
@@ -22,6 +23,7 @@ type SaveGenerationInput = {
 export async function saveGeneration(input: SaveGenerationInput) {
   return prisma.generation.create({
     data: {
+      userId: input.userId,
       jobTitle: input.jobTitle,
       jobDescription: input.jobDescription,
       experienceLevel: input.experienceLevel,

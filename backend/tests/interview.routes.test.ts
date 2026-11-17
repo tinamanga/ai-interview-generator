@@ -9,6 +9,7 @@ import {
 } from "vitest";
 
 import rateLimit from "@fastify/rate-limit";
+import jwt from "@fastify/jwt";
 import Fastify, { type FastifyInstance } from "fastify";
 
 // Create mock functions that can be shared with Vitest mocks.
@@ -32,6 +33,14 @@ import { GeminiIntegrationError } from "../src/integrations/gemini/gemini.errors
 
 describe("Interview generation routes", () => {
   let app: FastifyInstance;
+
+  // Generate a valid access token for authenticated route tests.
+  const getAuthHeaders = () => ({
+    authorization: `Bearer ${app.jwt.sign({
+      sub: "user-test-123",
+      email: "test@example.com"
+    })}`
+  });
 
   // Valid request used by the successful generation test.
   const validPayload = {
@@ -96,6 +105,13 @@ describe("Interview generation routes", () => {
       timeWindow: "1 minute"
     });
 
+    await app.register(jwt, {
+      secret: "test-only-secret-with-at-least-32-characters",
+      sign: {
+        expiresIn: "15m"
+      }
+    });
+
     await app.register(interviewRoutes, {
       prefix: "/api/v1"
     });
@@ -108,10 +124,42 @@ describe("Interview generation routes", () => {
   });
 
   describe("POST /api/v1/interviews/generate", () => {
+    it("rejects requests without an access token", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/v1/interviews/generate",
+        payload: validPayload
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe("UNAUTHENTICATED");
+
+      // Unauthenticated requests must not consume Gemini or database resources.
+      expect(mocks.generateInterviewQuestions).not.toHaveBeenCalled();
+      expect(mocks.saveGeneration).not.toHaveBeenCalled();
+    });
+
+    it("rejects malformed access tokens", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/v1/interviews/generate",
+        headers: {
+          authorization: "Bearer invalid.token.value"
+        },
+        payload: validPayload
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe("UNAUTHENTICATED");
+      expect(mocks.generateInterviewQuestions).not.toHaveBeenCalled();
+      expect(mocks.saveGeneration).not.toHaveBeenCalled();
+    });
+
     it("returns 400 when the request contains invalid data", async () => {
       const response = await app.inject({
         method: "POST",
         url: "/api/v1/interviews/generate",
+        headers: getAuthHeaders(),
         payload: {
           jobTitle: "A",
           experienceLevel: "JUNIOR",
@@ -146,6 +194,7 @@ describe("Interview generation routes", () => {
         const response = await app.inject({
           method: "POST",
           url: "/api/v1/interviews/generate",
+          headers: getAuthHeaders(),
           payload: validPayload
         });
 
@@ -156,6 +205,7 @@ describe("Interview generation routes", () => {
       const sixthResponse = await app.inject({
         method: "POST",
         url: "/api/v1/interviews/generate",
+        headers: getAuthHeaders(),
         payload: validPayload
       });
 
@@ -181,6 +231,7 @@ describe("Interview generation routes", () => {
         const response = await app.inject({
           method: "POST",
           url: "/api/v1/interviews/generate",
+          headers: getAuthHeaders(),
           payload: invalidPayload
         });
 
@@ -191,6 +242,7 @@ describe("Interview generation routes", () => {
       const sixthResponse = await app.inject({
         method: "POST",
         url: "/api/v1/interviews/generate",
+        headers: getAuthHeaders(),
         payload: invalidPayload
       });
 
@@ -213,6 +265,7 @@ describe("Interview generation routes", () => {
       const response = await app.inject({
         method: "POST",
         url: "/api/v1/interviews/generate",
+        headers: getAuthHeaders(),
         payload: validPayload
       });
 
@@ -231,6 +284,7 @@ describe("Interview generation routes", () => {
       // Confirm that the generated result was passed to the repository.
       expect(mocks.saveGeneration).toHaveBeenCalledWith({
         ...validPayload,
+        userId: "user-test-123",
         result: mockGenerationResult
       });
     });
@@ -246,6 +300,7 @@ describe("Interview generation routes", () => {
       const response = await app.inject({
         method: "POST",
         url: "/api/v1/interviews/generate",
+        headers: getAuthHeaders(),
         payload: validPayload
       });
 
@@ -272,6 +327,7 @@ describe("Interview generation routes", () => {
       const response = await app.inject({
         method: "POST",
         url: "/api/v1/interviews/generate",
+        headers: getAuthHeaders(),
         payload: validPayload
       });
 
