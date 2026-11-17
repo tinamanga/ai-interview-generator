@@ -10,6 +10,9 @@ import {
   InterviewApiError,
   type InterviewHistoryItem,
   type InterviewHistoryPagination,
+  type InterviewHistoryFilters,
+  type InterviewType,
+  type ExperienceLevel,
 } from "@/lib/interview-api";
 
 import { useAuth } from "@/providers/auth-provider";
@@ -59,6 +62,20 @@ export default function InterviewHistoryPage() {
     useState<InterviewHistoryPagination | null>(null);
 
   const [page, setPage] = useState(1);
+
+  // Draft values are edited before the user applies the filters.
+  const [searchInput, setSearchInput] = useState("");
+  const [interviewTypeInput, setInterviewTypeInput] =
+    useState<InterviewType | "">("");
+  const [experienceLevelInput, setExperienceLevelInput] =
+    useState<ExperienceLevel | "">("");
+
+  // Only applied filters are sent to the backend.
+  const [activeFilters, setActiveFilters] =
+    useState<InterviewHistoryFilters>({});
+
+  const hasActiveFilters = Object.values(activeFilters).some(Boolean);
+
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -79,14 +96,24 @@ export default function InterviewHistoryPage() {
       let result;
 
       try {
-        result = await getInterviewHistory(page, PAGE_SIZE, token);
+        result = await getInterviewHistory(
+          page,
+          PAGE_SIZE,
+          token,
+          activeFilters,
+        );
       } catch (error) {
         if (!(error instanceof InterviewApiError) || error.status !== 401) {
           throw error;
         }
 
         token = await refreshAccessToken();
-        result = await getInterviewHistory(page, PAGE_SIZE, token);
+        result = await getInterviewHistory(
+          page,
+          PAGE_SIZE,
+          token,
+          activeFilters,
+        );
       }
 
       setInterviews(result.interviews);
@@ -102,7 +129,7 @@ export default function InterviewHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, refreshAccessToken, page]);
+  }, [accessToken, refreshAccessToken, page, activeFilters]);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -116,6 +143,23 @@ export default function InterviewHistoryPage() {
   
     return () => clearTimeout(timeoutId);
   }, [status, loadHistory]);
+
+  function handleApplyFilters() {
+    setActiveFilters({
+      search: searchInput.trim() || undefined,
+      interviewType: interviewTypeInput || undefined,
+      experienceLevel: experienceLevelInput || undefined,
+    });
+    setPage(1);
+  }
+
+  function handleClearFilters() {
+    setSearchInput("");
+    setInterviewTypeInput("");
+    setExperienceLevelInput("");
+    setActiveFilters({});
+    setPage(1);
+  }
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -198,6 +242,101 @@ export default function InterviewHistoryPage() {
           </Link>
         </div>
 
+        <section
+          aria-label="Search and filter interviews"
+          className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+        >
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label
+                htmlFor="history-search"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Search by job title
+              </label>
+              <input
+                id="history-search"
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                maxLength={150}
+                placeholder="e.g. Backend Developer"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="history-interview-type"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Interview type
+              </label>
+              <select
+                id="history-interview-type"
+                value={interviewTypeInput}
+                onChange={(event) =>
+                  setInterviewTypeInput(event.target.value as InterviewType | "")
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="">All interview types</option>
+                <option value="TECHNICAL">Technical</option>
+                <option value="BEHAVIORAL">Behavioral</option>
+                <option value="MIXED">Mixed</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="history-experience-level"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Experience level
+              </label>
+              <select
+                id="history-experience-level"
+                value={experienceLevelInput}
+                onChange={(event) =>
+                  setExperienceLevelInput(event.target.value as ExperienceLevel | "")
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="">All experience levels</option>
+                <option value="JUNIOR">Junior</option>
+                <option value="MID">Mid-level</option>
+                <option value="SENIOR">Senior</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleApplyFilters}
+              disabled={loading}
+              className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Apply filters
+            </button>
+
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              disabled={
+                loading ||
+                (!hasActiveFilters &&
+                  !searchInput &&
+                  !interviewTypeInput &&
+                  !experienceLevelInput)
+              }
+              className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Clear filters
+            </button>
+          </div>
+        </section>
+
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold">Saved interviews</h2>
@@ -260,20 +399,31 @@ export default function InterviewHistoryPage() {
             </div>
 
             <h3 className="mt-5 text-lg font-bold">
-              No interviews yet
+              {hasActiveFilters ? "No matching interviews" : "No interviews yet"}
             </h3>
 
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-              Your generated interviews will appear here. Start by
-              generating tailored questions for a role you are preparing for.
+              {hasActiveFilters
+                ? "No saved interviews match your current search and filters. Try changing your filters or clearing them."
+                : "Your generated interviews will appear here. Start by generating tailored questions for a role you are preparing for."}
             </p>
 
-            <Link
-              href="/generate"
-              className="mt-6 inline-flex rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
-            >
-              Generate your first interview
-            </Link>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="mt-6 inline-flex rounded-xl border border-indigo-200 px-5 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
+              >
+                Clear filters
+              </button>
+            ) : (
+              <Link
+                href="/generate"
+                className="mt-6 inline-flex rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+              >
+                Generate your first interview
+              </Link>
+            )}
           </div>
         )}
 

@@ -211,16 +211,36 @@ export async function generateInterview(
   );
 }
 
+// Optional filters supported by the interview history endpoint.
+export interface InterviewHistoryFilters {
+  search?: string;
+  interviewType?: InterviewType;
+  experienceLevel?: ExperienceLevel;
+}
+
 // Retrieves one page of interview history for the authenticated user.
 export async function getInterviewHistory(
   page: number,
   limit: number,
   accessToken: string,
+  filters: InterviewHistoryFilters = {},
 ): Promise<InterviewHistoryResult> {
   const query = new URLSearchParams({
     page: String(page),
     limit: String(limit),
   });
+
+  if (filters.search?.trim()) {
+    query.set("search", filters.search.trim());
+  }
+
+  if (filters.interviewType) {
+    query.set("interviewType", filters.interviewType);
+  }
+
+  if (filters.experienceLevel) {
+    query.set("experienceLevel", filters.experienceLevel);
+  }
 
   const response = await fetch(
     `${getApiBaseUrl()}/interviews?${query.toString()}`,
