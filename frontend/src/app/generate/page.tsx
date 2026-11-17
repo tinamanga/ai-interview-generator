@@ -17,7 +17,13 @@ import {
 
 export default function Home() {
   const router = useRouter();
-  const { status, user, logout } = useAuth();
+  const {
+    status,
+    user,
+    accessToken,
+    refreshAccessToken,
+    logout,
+  } = useAuth();
 
   // Redirect visitors who do not have an authenticated session.
   useEffect(() => {
@@ -66,13 +72,32 @@ export default function Home() {
     setGeneration(null);
 
     try {
-      const result = await generateInterview({
+      const payload = {
         jobTitle: jobTitle.trim(),
         jobDescription: jobDescription.trim(),
         experienceLevel,
         interviewType,
         questionCount: Number(questionCount),
-      });
+      };
+
+      // Restore a token if the current session state does not have one.
+      let token = accessToken ?? await refreshAccessToken();
+
+      let result: InterviewGeneration;
+
+      try {
+        result = await generateInterview(payload, token);
+      } catch (error) {
+        // An expired access token can be refreshed using the HttpOnly cookie.
+        if (!(error instanceof InterviewApiError) || error.status !== 401) {
+          throw error;
+        }
+
+        token = await refreshAccessToken();
+
+        // Retry once with the newly issued access token.
+        result = await generateInterview(payload, token);
+      }
 
       setGeneration(result);
     } catch (error) {

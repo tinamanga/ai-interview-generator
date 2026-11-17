@@ -97,6 +97,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 // Sends a generation request to the Fastify backend.
 export async function generateInterview(
   input: GenerateInterviewRequest,
+  accessToken: string,
 ): Promise<InterviewGeneration> {
   if (!API_BASE_URL) {
     throw new Error("The API URL has not been configured.");
@@ -108,6 +109,7 @@ export async function generateInterview(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(input),
     },

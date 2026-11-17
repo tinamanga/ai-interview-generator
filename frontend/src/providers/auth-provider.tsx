@@ -29,6 +29,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   accessToken: string | null;
   status: AuthStatus;
+  refreshAccessToken: () => Promise<string>;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -105,6 +106,26 @@ export function AuthProvider({
     [],
   );
 
+  // Refresh the access token when an API request reports an expired session.
+  const refreshAccessToken = useCallback(async (): Promise<string> => {
+    try {
+      const session = await refreshAuthSession();
+
+      setUser(session.user);
+      setAccessToken(session.accessToken);
+      setStatus("authenticated");
+
+      return session.accessToken;
+    } catch (error) {
+      // A failed refresh means the current browser session is no longer usable.
+      setUser(null);
+      setAccessToken(null);
+      setStatus("unauthenticated");
+
+      throw error;
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await logoutRequest();
@@ -121,11 +142,12 @@ export function AuthProvider({
       user,
       accessToken,
       status,
+      refreshAccessToken,
       login,
       register,
       logout,
     }),
-    [user, accessToken, status, login, register, logout],
+    [user, accessToken, status, refreshAccessToken, login, register, logout],
   );
 
   return (
