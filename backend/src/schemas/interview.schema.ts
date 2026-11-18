@@ -68,3 +68,25 @@ export type InterviewHistoryQuery = z.infer<
 export const interviewIdParamsSchema = z.object({
   id: z.string().uuid("A valid interview ID is required.")
 }).strict();
+
+
+// Validate pagination parameters when retrieving bookmarked interviews.
+export const interviewBookmarksQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(1),
+
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .default(10)
+}).strict();
+
+// Keep bookmark pagination types synchronized with validation rules.
+export type InterviewBookmarksQuery = z.infer<
+  typeof interviewBookmarksQuerySchema
+>;

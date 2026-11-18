@@ -43,9 +43,10 @@ model User {
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
-  // A user can own multiple interview generations and sessions.
+  // A user can own multiple interview generations, sessions and bookmarks.
   generations Generation[]
   sessions    RefreshSession[]
+  bookmarks   InterviewBookmark[]
 
   @@index([createdAt])
   @@map("users")
@@ -96,6 +97,9 @@ model Generation {
   // Each generation can have at most one usage record.
   usage UsageRecord?
 
+  // A generation can be bookmarked by multiple users.
+  bookmarks InterviewBookmark[]
+
   @@index([userId, createdAt])
   @@index([createdAt])
   @@index([status])
@@ -136,4 +140,24 @@ model UsageRecord {
 
   @@index([createdAt])
   @@map("usage_records")
+}
+
+// Stores interviews that users have bookmarked for later preparation.
+model InterviewBookmark {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  generationId String   @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  // A bookmark belongs to one user and is removed when that user is deleted.
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // A bookmark belongs to one interview and is removed when that interview is deleted.
+  generation Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  // Prevent the same user from bookmarking an interview more than once.
+  @@unique([userId, generationId])
+  // Support efficient retrieval of a user's bookmarks.
+  @@index([userId, createdAt])
+  @@map("interview_bookmarks")
 }

@@ -7,7 +7,8 @@ import type {
 import {
   generateInterviewSchema,
   interviewHistoryQuerySchema,
-  interviewIdParamsSchema
+  interviewIdParamsSchema,
+  interviewBookmarksQuerySchema
 } from "../schemas/interview.schema.js";
 
 import { generateInterviewQuestions } from "../services/interview.service.js";
@@ -15,7 +16,10 @@ import { generateInterviewQuestions } from "../services/interview.service.js";
 import {
   saveGeneration,
   listUserGenerations,
-  findUserGenerationById
+  findUserGenerationById,
+  bookmarkUserGeneration,
+  removeUserGenerationBookmark,
+  listUserGenerationBookmarks
 } from "../repositories/interview.repository.js";
 
 import { GeminiIntegrationError } from "../integrations/gemini/gemini.errors.js";
@@ -145,6 +149,66 @@ const interviewRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  // Retrieve the authenticated user's bookmarked interviews.
+  // This static route must be registered before /interviews/:id.
+  fastify.get("/interviews/bookmarks", {
+    preHandler: authenticateRequest
+  }, async (request, reply) => {
+    const validation = interviewBookmarksQuerySchema.safeParse(
+      request.query
+    );
+
+    if (!validation.success) {
+      return reply.code(400).send({
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "The bookmark pagination parameters are invalid.",
+          details: validation.error.issues.map((issue) => ({
+            field: issue.path.join("."),
+            message: issue.message
+          }))
+        }
+      });
+    }
+
+    try {
+      const { page, limit } = validation.data;
+
+      const { bookmarks, total } = await listUserGenerationBookmarks(
+        request.user.sub,
+        page,
+        limit
+      );
+
+      return reply.code(200).send({
+        success: true,
+        data: {
+          bookmarks,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+          }
+        }
+      });
+    } catch (error) {
+      request.log.error(
+        { err: error },
+        "Unable to retrieve bookmarked interviews"
+      );
+
+      return reply.code(500).send({
+        success: false,
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to retrieve bookmarked interviews."
+        }
+      });
+    }
+  });
+
   // Retrieve one saved interview belonging to the authenticated user.
   fastify.get("/interviews/:id", {
     preHandler: authenticateRequest
@@ -198,6 +262,128 @@ const interviewRoutes: FastifyPluginAsync = async (fastify) => {
         error: {
           code: "INTERNAL_SERVER_ERROR",
           message: "Unable to retrieve the saved interview."
+        }
+      });
+    }
+  });
+
+  // Bookmark a successful interview belonging to the authenticated user.
+  fastify.post("/interviews/:id/bookmark", {
+    preHandler: authenticateRequest
+  }, async (request, reply) => {
+    const validation = interviewIdParamsSchema.safeParse(
+      request.params
+    );
+
+    if (!validation.success) {
+      return reply.code(400).send({
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "The interview ID is invalid.",
+          details: validation.error.issues.map((issue) => ({
+            field: issue.path.join("."),
+            message: issue.message
+          }))
+        }
+      });
+    }
+
+    try {
+      const bookmark = await bookmarkUserGeneration(
+        request.user.sub,
+        validation.data.id
+      );
+
+      if (!bookmark) {
+        return reply.code(404).send({
+          success: false,
+          error: {
+            code: "INTERVIEW_NOT_FOUND",
+            message: "The requested interview could not be found."
+          }
+        });
+      }
+
+      // The repository uses upsert, so repeating this request is safe.
+      return reply.code(200).send({
+        success: true,
+        message: "Interview bookmarked successfully.",
+        data: bookmark
+      });
+    } catch (error) {
+      request.log.error(
+        { err: error },
+        "Unable to bookmark interview"
+      );
+
+      return reply.code(500).send({
+        success: false,
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to bookmark the interview."
+        }
+      });
+    }
+  });
+
+  // Remove a bookmark without exposing interviews owned by other users.
+  fastify.delete("/interviews/:id/bookmark", {
+    preHandler: authenticateRequest
+  }, async (request, reply) => {
+    const validation = interviewIdParamsSchema.safeParse(
+      request.params
+    );
+
+    if (!validation.success) {
+      return reply.code(400).send({
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "The interview ID is invalid.",
+          details: validation.error.issues.map((issue) => ({
+            field: issue.path.join("."),
+            message: issue.message
+          }))
+        }
+      });
+    }
+
+    try {
+      const removedCount = await removeUserGenerationBookmark(
+        request.user.sub,
+        validation.data.id
+      );
+
+      if (removedCount === null) {
+        return reply.code(404).send({
+          success: false,
+          error: {
+            code: "INTERVIEW_NOT_FOUND",
+            message: "The requested interview could not be found."
+          }
+        });
+      }
+
+      // A count of zero means it was already removed; that is still success.
+      return reply.code(200).send({
+        success: true,
+        message: "Interview bookmark removed successfully.",
+        data: {
+          removed: removedCount > 0
+        }
+      });
+    } catch (error) {
+      request.log.error(
+        { err: error },
+        "Unable to remove interview bookmark"
+      );
+
+      return reply.code(500).send({
+        success: false,
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to remove the interview bookmark."
         }
       });
     }

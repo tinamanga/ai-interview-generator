@@ -1,3 +1,4 @@
+
 import {
   ExperienceLevel,
   InterviewType,
@@ -72,7 +73,10 @@ export async function listUserGenerations(
   userId: string,
   page: number,
   limit: number,
-  filters: Pick<InterviewHistoryQuery, "search" | "interviewType" | "experienceLevel"> = {}
+  filters: Pick<
+    InterviewHistoryQuery,
+    "search" | "interviewType" | "experienceLevel"
+  > = {}
 ) {
   const skip = (page - 1) * limit;
 
@@ -164,4 +168,134 @@ export async function findUserGenerationById(
       }
     }
   });
+}
+
+// Creates a bookmark for an interview owned by the requesting user.
+// The upsert makes repeated bookmark requests safe and idempotent.
+export async function bookmarkUserGeneration(
+  userId: string,
+  generationId: string
+) {
+  // Only successful interviews belonging to this user can be bookmarked.
+  const generation = await prisma.generation.findFirst({
+    where: {
+      id: generationId,
+      userId,
+      status: GenerationStatus.SUCCEEDED
+    },
+    select: {
+      id: true
+    }
+  });
+
+  if (!generation) {
+    return null;
+  }
+
+  // The unique constraint prevents duplicate bookmarks.
+  // If one already exists, return it instead of creating another.
+  return prisma.interviewBookmark.upsert({
+    where: {
+      userId_generationId: {
+        userId,
+        generationId
+      }
+    },
+    create: {
+      userId,
+      generationId
+    },
+    update: {},
+    select: {
+      id: true,
+      generationId: true,
+      createdAt: true
+    }
+  });
+}
+
+// Removes a bookmark only when the interview belongs to the user.
+// Returns null if the interview is not owned by the user, or the
+// number of removed bookmarks (0 or 1) if ownership is confirmed.
+export async function removeUserGenerationBookmark(
+  userId: string,
+  generationId: string
+) {
+  // Verify ownership first to avoid exposing another user's interviews.
+  const generation = await prisma.generation.findFirst({
+    where: {
+      id: generationId,
+      userId,
+      status: GenerationStatus.SUCCEEDED
+    },
+    select: {
+      id: true
+    }
+  });
+
+  if (!generation) {
+    return null;
+  }
+
+  // deleteMany makes removing a bookmark idempotent.
+  const result = await prisma.interviewBookmark.deleteMany({
+    where: {
+      userId,
+      generationId
+    }
+  });
+
+  return result.count;
+}
+
+// Returns the user's bookmarks with pagination.
+export async function listUserGenerationBookmarks(
+  userId: string,
+  page: number,
+  limit: number
+) {
+  const skip = (page - 1) * limit;
+
+  const where = {
+    userId,
+    generation: {
+      status: GenerationStatus.SUCCEEDED
+    }
+  };
+
+  const [bookmarks, total] = await prisma.$transaction([
+    prisma.interviewBookmark.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc"
+      },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        createdAt: true,
+        generation: {
+          select: {
+            id: true,
+            jobTitle: true,
+            experienceLevel: true,
+            interviewType: true,
+            questionCount: true,
+            createdAt: true,
+            completedAt: true,
+            _count: {
+              select: {
+                questions: true
+              }
+            }
+          }
+        }
+      }
+    }),
+    prisma.interviewBookmark.count({
+      where
+    })
+  ]);
+
+  return { bookmarks, total };
 }
