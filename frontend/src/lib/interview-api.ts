@@ -90,6 +90,7 @@ export interface InterviewHistoryResult {
 
 // A saved interview with its questions, returned by the detail endpoint.
 export interface SavedInterview {
+  isBookmarked: boolean;
   id: string;
   jobTitle: string;
   jobDescription: string;
@@ -279,5 +280,111 @@ export async function getInterviewById(
   return parseInterviewResponse<SavedInterview>(
     response,
     "Unable to retrieve the saved interview.",
+  );
+}
+
+// A bookmarked interview returned by the bookmarks endpoint.
+export interface InterviewBookmarkItem {
+  id: string;
+  createdAt: string;
+  generation: {
+    id: string;
+    jobTitle: string;
+    experienceLevel: ExperienceLevel;
+    interviewType: InterviewType;
+    questionCount: number;
+    createdAt: string;
+    completedAt: string | null;
+    _count: {
+      questions: number;
+    };
+  };
+}
+
+// Paginated list of bookmarked interviews.
+export interface InterviewBookmarksResult {
+  bookmarks: InterviewBookmarkItem[];
+  pagination: InterviewHistoryPagination;
+}
+
+// Result returned when a bookmark is created.
+export interface InterviewBookmarkResult {
+  id: string;
+  generationId: string;
+  createdAt: string;
+}
+
+// Result returned when a bookmark is removed.
+export interface RemoveInterviewBookmarkResult {
+  removed: boolean;
+}
+
+// Saves an interview to the authenticated user's bookmarks.
+export async function bookmarkInterview(
+  interviewId: string,
+  accessToken: string,
+): Promise<InterviewBookmarkResult> {
+  const response = await fetch(
+    `${getApiBaseUrl()}/interviews/${encodeURIComponent(interviewId)}/bookmark`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  return parseInterviewResponse<InterviewBookmarkResult>(
+    response,
+    "Unable to bookmark this interview.",
+  );
+}
+
+// Removes an interview from the authenticated user's bookmarks.
+export async function removeInterviewBookmark(
+  interviewId: string,
+  accessToken: string,
+): Promise<RemoveInterviewBookmarkResult> {
+  const response = await fetch(
+    `${getApiBaseUrl()}/interviews/${encodeURIComponent(interviewId)}/bookmark`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  return parseInterviewResponse<RemoveInterviewBookmarkResult>(
+    response,
+    "Unable to remove this interview bookmark.",
+  );
+}
+
+// Retrieves one page of bookmarks belonging to the authenticated user.
+export async function getInterviewBookmarks(
+  page: number,
+  limit: number,
+  accessToken: string,
+): Promise<InterviewBookmarksResult> {
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  const response = await fetch(
+    `${getApiBaseUrl()}/interviews/bookmarks?${query.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: "no-store",
+    },
+  );
+
+  return parseInterviewResponse<InterviewBookmarksResult>(
+    response,
+    "Unable to retrieve your bookmarked interviews.",
   );
 }

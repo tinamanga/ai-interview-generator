@@ -205,6 +205,13 @@ export default function InterviewHistoryPage() {
               {user?.email}
             </span>
 
+            <Link
+              href="/bookmarks"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50"
+            >
+              Bookmarks
+            </Link>
+
             <button
               type="button"
               onClick={handleLogout}

@@ -6,8 +6,10 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import {
+  bookmarkInterview,
   getInterviewById,
   InterviewApiError,
+  removeInterviewBookmark,
   type SavedInterview,
 } from "@/lib/interview-api";
 
@@ -87,6 +89,9 @@ function SavedInterviewContent() {
   const [errorMessage, setErrorMessage] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [bookmarkUpdating, setBookmarkUpdating] = useState(false);
+  const [bookmarkMessage, setBookmarkMessage] = useState("");
+  const [bookmarkError, setBookmarkError] = useState("");
 
   // Redirect visitors who do not have an authenticated session.
   useEffect(() => {
@@ -159,6 +164,64 @@ function SavedInterviewContent() {
     router.replace("/login");
   }
 
+  // Save or remove the current interview from the user's bookmarks.
+  async function handleBookmarkToggle() {
+    if (!interview || bookmarkUpdating) {
+      return;
+    }
+
+    setBookmarkUpdating(true);
+    setBookmarkError("");
+    setBookmarkMessage("");
+
+    try {
+      let token = accessToken ?? await refreshAccessToken();
+
+      // Retry once with a refreshed token if the access token has expired.
+      try {
+        if (interview.isBookmarked) {
+          await removeInterviewBookmark(interview.id, token);
+        } else {
+          await bookmarkInterview(interview.id, token);
+        }
+      } catch (error) {
+        if (!(error instanceof InterviewApiError) || error.status !== 401) {
+          throw error;
+        }
+
+        token = await refreshAccessToken();
+
+        if (interview.isBookmarked) {
+          await removeInterviewBookmark(interview.id, token);
+        } else {
+          await bookmarkInterview(interview.id, token);
+        }
+      }
+
+      const nextBookmarkedState = !interview.isBookmarked;
+
+      setInterview((current) =>
+        current
+          ? { ...current, isBookmarked: nextBookmarkedState }
+          : current,
+      );
+
+      setBookmarkMessage(
+        nextBookmarkedState
+          ? "Interview added to your bookmarks."
+          : "Interview removed from your bookmarks.",
+      );
+    } catch (error) {
+      setBookmarkError(
+        error instanceof InterviewApiError
+          ? error.message
+          : "Unable to update this bookmark. Please try again.",
+      );
+    } finally {
+      setBookmarkUpdating(false);
+    }
+  }
+
   if (status !== "authenticated") {
     return <InterviewPageFallback />;
   }
@@ -181,6 +244,13 @@ function SavedInterviewContent() {
             <span className="hidden text-sm text-slate-500 sm:inline">
               {user?.email}
             </span>
+
+            <Link
+              href="/bookmarks"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50"
+            >
+              Bookmarks
+            </Link>
 
             <button
               type="button"
@@ -274,6 +344,38 @@ function SavedInterviewContent() {
                 <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
                   {interview.questions.length} questions
                 </span>
+              </div>
+
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => void handleBookmarkToggle()}
+                  disabled={bookmarkUpdating}
+                  aria-pressed={interview.isBookmarked}
+                  className={`rounded-xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                    interview.isBookmarked
+                      ? "border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                      : "bg-indigo-600 text-white hover:bg-indigo-700"
+                  }`}
+                >
+                  {bookmarkUpdating
+                    ? "Updating bookmark..."
+                    : interview.isBookmarked
+                      ? "★ Remove bookmark"
+                      : "☆ Save bookmark"}
+                </button>
+
+                {bookmarkMessage && (
+                  <p className="mt-2 text-sm text-emerald-700" role="status">
+                    {bookmarkMessage}
+                  </p>
+                )}
+
+                {bookmarkError && (
+                  <p className="mt-2 text-sm text-red-700" role="alert">
+                    {bookmarkError}
+                  </p>
+                )}
               </div>
 
               {interview.jobDescription && (
