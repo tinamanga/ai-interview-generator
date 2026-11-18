@@ -66,6 +66,7 @@ import {
     };
   
     const mockInterviewDetails = {
+      isBookmarked: true,
       id: interviewId,
       jobTitle: "Junior Backend Developer",
       jobDescription: "A backend developer role requiring API and database skills.",
@@ -377,6 +378,7 @@ import {
   
         expect(body.success).toBe(true);
         expect(body.data.id).toBe(interviewId);
+        expect(body.data.isBookmarked).toBe(true);
         expect(body.data.questions).toHaveLength(1);
         expect(body.data.questions[0].question).toBe(
           "What is a REST API?"
@@ -388,6 +390,22 @@ import {
         );
       });
   
+      it("returns false when the interview has not been bookmarked", async () => {
+        mocks.findUserGenerationById.mockResolvedValue({
+          ...mockInterviewDetails,
+          isBookmarked: false
+        });
+
+        const response = await app.inject({
+          method: "GET",
+          url: `/api/v1/interviews/${interviewId}`,
+          headers: getAuthHeaders(userA)
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(response.json().data.isBookmarked).toBe(false);
+      });
+
       it("does not return an interview that does not belong to the user", async () => {
         // The repository returns null when the ID is not owned by user B.
         mocks.findUserGenerationById.mockResolvedValue(null);

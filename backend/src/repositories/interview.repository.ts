@@ -137,7 +137,7 @@ export async function findUserGenerationById(
   userId: string,
   generationId: string
 ) {
-  return prisma.generation.findFirst({
+  const interview = await prisma.generation.findFirst({
     where: {
       id: generationId,
       userId,
@@ -165,9 +165,30 @@ export async function findUserGenerationById(
           evaluationCriteria: true,
           createdAt: true
         }
+      },
+      // Only inspect bookmarks belonging to the requesting user.
+      bookmarks: {
+        where: {
+          userId
+        },
+        select: {
+          id: true
+        },
+        take: 1
       }
     }
   });
+
+  if (!interview) {
+    return null;
+  }
+
+  const { bookmarks, ...details } = interview;
+
+  return {
+    ...details,
+    isBookmarked: bookmarks.length > 0
+  };
 }
 
 // Creates a bookmark for an interview owned by the requesting user.
