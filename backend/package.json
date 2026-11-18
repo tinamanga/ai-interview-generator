@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "test:gemini": "RUN_GEMINI_INTEGRATION=true vitest run tests/gemini.integration.test.ts"
+    "test:gemini": "RUN_GEMINI_INTEGRATION=true vitest run tests/gemini.integration.test.ts",
+    "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
