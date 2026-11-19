@@ -38,7 +38,8 @@ export async function buildApp() {
   // Only the configured frontend origin may access the API with credentials.
   await app.register(cors, {
     origin: env.FRONTEND_URL,
-    credentials: true
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
   });
 
   await app.register(rateLimit, {
