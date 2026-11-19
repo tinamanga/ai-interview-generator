@@ -92,6 +92,8 @@ function SavedInterviewContent() {
   const [bookmarkUpdating, setBookmarkUpdating] = useState(false);
   const [bookmarkMessage, setBookmarkMessage] = useState("");
   const [bookmarkError, setBookmarkError] = useState("");
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const [pdfExportError, setPdfExportError] = useState("");
 
   // Redirect visitors who do not have an authenticated session.
   useEffect(() => {
@@ -222,6 +224,25 @@ function SavedInterviewContent() {
     }
   }
 
+  // Generate a PDF locally when the user requests an export.
+  async function handlePdfExport() {
+    if (!interview || pdfExporting) {
+      return;
+    }
+
+    setPdfExporting(true);
+    setPdfExportError("");
+
+    try {
+      const { exportInterviewPdf } = await import("@/lib/export-interview-pdf");
+      exportInterviewPdf(interview);
+    } catch {
+      setPdfExportError("Unable to create the PDF. Please try again.");
+    } finally {
+      setPdfExporting(false);
+    }
+  }
+
   if (status !== "authenticated") {
     return <InterviewPageFallback />;
   }
@@ -346,7 +367,7 @@ function SavedInterviewContent() {
                 </span>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={() => void handleBookmarkToggle()}
@@ -365,15 +386,30 @@ function SavedInterviewContent() {
                       : "☆ Save bookmark"}
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => void handlePdfExport()}
+                  disabled={pdfExporting}
+                  className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {pdfExporting ? "Preparing PDF..." : "↓ Download PDF"}
+                </button>
+
                 {bookmarkMessage && (
-                  <p className="mt-2 text-sm text-emerald-700" role="status">
+                  <p className="w-full text-sm text-emerald-700" role="status">
                     {bookmarkMessage}
                   </p>
                 )}
 
                 {bookmarkError && (
-                  <p className="mt-2 text-sm text-red-700" role="alert">
+                  <p className="w-full text-sm text-red-700" role="alert">
                     {bookmarkError}
+                  </p>
+                )}
+
+                {pdfExportError && (
+                  <p className="w-full text-sm text-red-700" role="alert">
+                    {pdfExportError}
                   </p>
                 )}
               </div>
